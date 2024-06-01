@@ -1,29 +1,28 @@
-import Rule, { RuleValueEnum } from '../rule';
 import NumberRule from './NumberRule';
 
 export default class NumberRuleOptions extends NumberRule {
-  public min: number;
-  public max: number;
+  public minValue: number;
+  public maxValue: number;
 
   constructor() {
     super();
-    this.min = Number.MIN_SAFE_INTEGER;
-    this.max = Number.MAX_SAFE_INTEGER;
+    this.minValue = Number.MIN_SAFE_INTEGER;
+    this.maxValue = Number.MAX_SAFE_INTEGER;
   }
 
-  public setMin(min: number): NumberRuleOptions {
-    this.min = min;
+  public min(min: number): NumberRuleOptions {
+    this.minValue = min;
     return this;
   }
 
-  public setMax(max: number): NumberRuleOptions {
-    this.max = max;
+  public max(max: number): NumberRuleOptions {
+    this.maxValue = max;
     return this;
   }
 
   public range(min: number, max: number): NumberRuleOptions {
-    this.min = min;
-    this.max = max;
+    this.minValue = min;
+    this.maxValue = max;
     return this;
   }
 

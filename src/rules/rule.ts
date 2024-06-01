@@ -85,15 +85,15 @@ export default abstract class Rule {
       return undefined;
     }
 
-    if (typeof value !== 'number') {
+    if (isNaN(value as number)) {
       return null;
     }
 
-    if (rule.min && value < rule.min) {
+    if (rule.minValue && (value as number) < rule.minValue) {
       return null;
     }
 
-    if (rule.max && value > rule.max) {
+    if (rule.maxValue && (value as number) > rule.maxValue) {
       return null;
     }
 

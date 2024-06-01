@@ -42,11 +42,11 @@ declare class NumberRule extends Rule {
 }
 
 declare class NumberRuleOptions extends NumberRule {
-    min: number;
-    max: number;
+    minValue: number;
+    maxValue: number;
     constructor();
-    setMin(min: number): NumberRuleOptions;
-    setMax(max: number): NumberRuleOptions;
+    min(min: number): NumberRuleOptions;
+    max(max: number): NumberRuleOptions;
     range(min: number, max: number): NumberRuleOptions;
     optional(): NumberRule;
 }
