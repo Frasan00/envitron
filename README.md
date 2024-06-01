@@ -28,6 +28,7 @@ env.createEnvSchema((schema) => {
   };
 });
 
-const NODE_ENV = env.getEnv('NODE_ENV');
+// Default value is used if no env with the given name is found
+const NODE_ENV = env.getEnv('NODE_ENV', 'staging');
 ```
 
