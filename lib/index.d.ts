@@ -72,10 +72,12 @@ declare class StringRuleOptions extends Rule {
     optional(): StringRule;
 }
 
-type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env';
+type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
 declare class EnvSchema {
     envFileHierarchy: envFileNames[] | envFileNames;
     throwErrorOnValidationFail: boolean;
+    envFilePath?: string;
+    logs: boolean;
     /**
      * @description Schema class is used to define the rules for the environment variables
      * @description rules - object containing the rules for the environment variables
@@ -120,7 +122,7 @@ declare class EnvironmentManager {
      * @param cb - A callback function that returns the schema for the environment variables
      */
     createEnvSchema(cb: (schema: EnvSchema) => Record<string, Rule>): void;
-    getEnv<Key extends keyof typeof this.rules>(key: Key): GetEnvDynamicType<(typeof this.rules)[Key]['valueType']> | undefined;
+    getEnv<Key extends keyof typeof this.rules>(key: Key, defaultValue?: any): GetEnvDynamicType<(typeof this.rules)[Key]['valueType']> | undefined;
     protected collectEnvs(): Record<string, RuleValueTypes>;
     protected parseEnvFile(envPath: string): Record<string, RuleValueTypes>;
     protected validateRequiredEnvs(): void;

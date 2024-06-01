@@ -39,13 +39,15 @@ export default class EnvironmentManager {
       this.rules[key].key = key;
     }
 
-    this.rootPath = path.resolve(__dirname);
+    this.logs = this.schema.logs;
+    this.rootPath = this.schema.envFilePath || path.resolve(__dirname);
     this.envs = this.collectEnvs();
     this.validateRequiredEnvs();
   }
 
   public getEnv<Key extends keyof typeof this.rules>(
-    key: Key
+    key: Key,
+    defaultValue?: any
   ): GetEnvDynamicType<(typeof this.rules)[Key]['valueType']> | undefined {
     const rule = this.rules[key];
     const value = this.envs[key];
@@ -53,7 +55,9 @@ export default class EnvironmentManager {
       return value;
     }
 
-    return this.envs[key] as GetEnvDynamicType<(typeof this.rules)[Key]['valueType']>;
+    return (
+      (this.envs[key] as GetEnvDynamicType<(typeof this.rules)[Key]['valueType']>) || defaultValue
+    );
   }
 
   protected collectEnvs(): Record<string, RuleValueTypes> {
@@ -75,6 +79,8 @@ export default class EnvironmentManager {
     for (const envFile of envFileHierarchy) {
       const envPath = `${this.rootPath}/${envFile}`;
       if (!fs.existsSync(envPath)) {
+        log(`Environment file not found: ${envPath}`, this.logs);
+        log(`Trying next environment file...`, this.logs);
         continue;
       }
 

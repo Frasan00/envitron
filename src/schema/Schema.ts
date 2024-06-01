@@ -14,11 +14,37 @@ type envFileNames =
   | '.development.env'
   | '.production.env'
   | '.test.env'
-  | '.staging.env';
+  | '.staging.env'
+  | '.env.local.local'
+  | '.env.local.development'
+  | '.env.local.production'
+  | '.env.local.test'
+  | '.env.local.staging'
+  | '.env.development.local'
+  | '.env.development.development'
+  | '.env.development.production'
+  | '.env.development.test'
+  | '.env.development.staging'
+  | '.env.production.local'
+  | '.env.production.development'
+  | '.env.production.production'
+  | '.env.production.test'
+  | '.env.production.staging'
+  | '.env.test.local'
+  | '.env.test.development'
+  | '.env.test.production'
+  | '.env.test.test'
+  | '.env.test.staging'
+  | '.env.staging.local'
+  | '.env.staging.development'
+  | '.env.staging.production'
+  | '.env.staging.test';
 
 export default class EnvSchema {
   public envFileHierarchy: envFileNames[] | envFileNames;
   public throwErrorOnValidationFail: boolean;
+  public envFilePath?: string;
+  public logs: boolean;
 
   /**
    * @description Schema class is used to define the rules for the environment variables
@@ -29,6 +55,7 @@ export default class EnvSchema {
   constructor() {
     this.envFileHierarchy = ['.env'];
     this.throwErrorOnValidationFail = true;
+    this.logs = true;
   }
 
   /**

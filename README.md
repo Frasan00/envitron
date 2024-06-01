@@ -5,10 +5,16 @@
 ```typescript
 import env from 'envitron';
 
-// Env schema must be defined in a file inside the same directory as the .env file
 env.createEnvSchema((schema) => {
-  // Defines the hierarchy of the env files to be loaded, only the first file found will be loaded
+  // Defines the hierarchy of the env files to be loaded, only the first file found will be loaded, default ['.env']
+  // Also a single string with env file name can be set
   schema.envFileHierarchy = ['.env', '.env.local', '.env.development', '.env.production'];
+
+  // A custom path for the env file can be set here, default path.resolve(__dirname)
+  schema.envFilePath = './';
+
+  // Enable debugging, default true
+  schema.logs = true;
 
   // If set to true, an error will be thrown if an environment variable fails validation
   schema.throwErrorOnValidationFail = false; // default true
