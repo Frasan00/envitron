@@ -160,8 +160,4 @@ export default class EnvironmentManager {
 
     return parsedValue;
   }
-
-  private prettifyJsonPrint(json: Object) {
-    return JSON.stringify(json, null, 2);
-  }
 }

@@ -125,7 +125,6 @@ declare class EnvironmentManager {
     protected parseEnvFile(envPath: string): Record<string, RuleValueTypes>;
     protected validateRequiredEnvs(): void;
     protected validateEnv(envKey: string, envValue: RuleValueTypes): RuleValueTypes | undefined;
-    private prettifyJsonPrint;
 }
 
 declare const env: EnvironmentManager;
