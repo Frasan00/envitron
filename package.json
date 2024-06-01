@@ -1,0 +1,55 @@
+{
+  "name": "envitron",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Frasan00/environment-manager.git",
+  "author": "Frasan00 <francesco.sangiovanni.7@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "watch": "tsc --watch",
+    "test": "yarn format && rm -rf ./lib && yarn build && touch ./lib/.env && cp ./.env ./lib/.env && yarn start",
+    "format": "prettier --write '**/*.ts'",
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "build": "yarn format && tsup",
+    "dev": "ts-node src/index.ts",
+    "start": "node lib/index.js"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:adonis/typescriptApp",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier"
+    ],
+    "rules": {
+      "prettier/prettier": [
+        "error"
+      ]
+    }
+  },
+  "eslintIgnore": [
+    "build"
+  ],
+  "prettier": {
+    "trailingComma": "es5",
+    "semi": true,
+    "singleQuote": true,
+    "useTabs": false,
+    "quoteProps": "consistent",
+    "bracketSpacing": true,
+    "arrowParens": "always",
+    "printWidth": 100
+  },
+  "dependencies": {
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.20",
+    "prettier": "^3.1.0",
+    "tsc": "^2.0.4",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  }
+}
