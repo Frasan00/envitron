@@ -100,9 +100,13 @@ export default class EnvironmentManager {
     const envs = envFile.split('\n');
     const envsObject: Record<string, RuleValueTypes> = {};
   
-    const regex = /^(\S+)=\s*(?:"([^"]*)"|(.*))/;
+    const regex = /^(\S+)=\s*(?:"([^"#]*)"|([^#]*))/;
   
     for (const env of envs) {
+      if (env.trim().startsWith('#')) {
+        continue;
+      }
+  
       const match = env.match(regex);
       if (match) {
         const key = match[1];
