@@ -99,30 +99,34 @@ export default class EnvironmentManager {
     const envFile = fs.readFileSync(envPath, 'utf8');
     const envs = envFile.split('\n');
     const envsObject: Record<string, RuleValueTypes> = {};
-
+  
     const regex = /^(\S+)=\s*(?:"([^"]*)"|(.*))/;
-
+  
     for (const env of envs) {
       const match = env.match(regex);
       if (match) {
         const key = match[1];
         let value = match[2] || match[3];
-
+  
         if (!match[2]) {
           value = value.trim();
         }
-
+  
+        if (value === '') {
+          continue;
+        }
+  
         envsObject[key] = value;
-
+  
         const validatedValue = this.validateEnv(key, envsObject[key]);
         if (validatedValue === undefined) {
           continue;
         }
-
+  
         envsObject[key] = validatedValue;
       }
     }
-
+  
     return envsObject as Record<string, RuleValueTypes>;
   }
 
