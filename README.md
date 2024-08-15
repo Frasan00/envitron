@@ -22,7 +22,7 @@ const env = await createEnvSchema(
 // Retrieve all the environment variables
 const allEnvs = env.getAll();
 
-// Retrieve a specific schema environment variable with a default value
+// Retrieve a specific schema environment variable with a default value, the type will be inferred from the schema
 const schemaBasedNodeEnv = env.get('NODE_ENV', "development");
 
 // Retrieve searching on all the environment variables regardless of the schema
