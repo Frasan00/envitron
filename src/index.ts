@@ -1,5 +1,4 @@
 import EnvironmentManager from './EnvironmentManager';
-const getInstance = EnvironmentManager.getInstance;
 
-export { getInstance };
+export const getInstance = EnvironmentManager.getInstance;
 export default EnvironmentManager.createEnvSchema;
