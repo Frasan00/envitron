@@ -91,7 +91,6 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
   /**
    * @description - Used for schema-less environment variable retrieval
-   * @param cb - A callback function that returns the schema for the environment variables
    */
   public static getInstance<T extends Record<string, SchemaTypes>>(options?: {
     logs?: boolean;
