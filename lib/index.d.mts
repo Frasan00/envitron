@@ -1,9 +1,13 @@
-import * as _vinejs_vine_build_src_types from '@vinejs/vine/build/src/types';
+import * as vine from '@vinejs/vine';
+import vine__default from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
-import * as vineLib from '@vinejs/vine';
-import vineLib__default from '@vinejs/vine';
 
-type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vineLib.default.object<Properties>>;
+type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vine.default.object<Properties>>;
+type ParsedNumber = ReturnType<typeof vine__default.number>;
+type ParsedString = ReturnType<typeof vine__default.string>;
+type ParsedBoolean = ReturnType<typeof vine__default.boolean>;
+type ParsedEnum = ReturnType<typeof vine__default.enum>;
+type ParsedDate = ReturnType<typeof vine__default.date>;
 type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
 declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     schema: ReturnTypeObject<T>;
@@ -12,33 +16,53 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     private logs;
     private throwErrorOnValidationFail;
     private envFileHierarchy;
-    constructor();
+    private constructor();
     /**
      *
      * @returns - Returns all the environment variables
      */
     getAll(): Record<string, string | number | boolean | undefined>;
     /**
-     * @description - This function is used to create the schema for the environment variables
+     * @description - Used for schema-less environment variable retrieval
      * @param cb - A callback function that returns the schema for the environment variables
      */
-    createEnvSchema(schemaBuilder: (vineInstance: typeof vineLib__default) => ReturnTypeObject<T>, options?: {
+    static getInstance<T extends Record<string, SchemaTypes>>(options?: {
+        logs?: boolean;
+        rootPath?: string;
+        envFileHierarchy?: envFileNames[];
+    }): EnvironmentManager<T>;
+    /**
+     * @description - This function is used to create the schema for the environment variables
+     * @param cb - A callback function that returns the schema for the environment variables
+     * @param options - An object that contains the options for the environment manager
+     */
+    static createEnvSchema<T extends Record<string, SchemaTypes>>(schemaBuilder: (vineInstance: typeof vine__default) => ReturnTypeObject<T>, options?: {
         logs?: boolean;
         rootPath?: string;
         throwErrorOnValidationFail?: boolean;
         envFileHierarchy?: envFileNames[];
-    }): Promise<void>;
+    }): Promise<EnvironmentManager<T>>;
     /**
-     * @description - This function is used to get a value from the environment variables
+     * @description - This function is used to get a raw value from the environment variables outside the schema
      * @param key
      * @param defaultValue
      * @returns
      */
-    get<K extends keyof T>(key: K, defaultValue?: T[K]): T[K] | undefined;
+    getRaw(key: string, defaultValue?: any): string | number | boolean | undefined;
+    /**
+     * @description - This function is used to get a value from the environment variables from the schema
+     * @description - In order to retrieve an outside schema value, use the getRaw function
+     * @param key
+     * @param defaultValue
+     * @returns
+     */
+    get<K extends keyof T>(key: K, defaultValue?: any, schema?: ReturnTypeObject<T>): T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum ? string : T[K] extends ParsedDate ? Date : any;
     protected collectEnvs(): Record<string, string | number | boolean>;
     protected parseEnvFile(envPath: string): Record<string, string | number | boolean>;
 }
 
-declare const env: EnvironmentManager<Record<string, _vinejs_vine_build_src_types.SchemaTypes>>;
+declare const getInstance: typeof EnvironmentManager.getInstance;
 
-export { env as default };
+declare const _default: typeof EnvironmentManager.createEnvSchema;
+
+export { _default as default, getInstance };

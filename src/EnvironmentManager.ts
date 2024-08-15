@@ -89,30 +89,28 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     return this.envs;
   }
 
-    /**
+  /**
    * @description - Used for schema-less environment variable retrieval
    * @param cb - A callback function that returns the schema for the environment variables
    */
-    public static getInstance<T extends Record<string, SchemaTypes>>(
-      options?: {
-        logs?: boolean;
-        rootPath?: string;
-        envFileHierarchy?: envFileNames[];
-      }
-    ): EnvironmentManager<T> {
-      const envFileHierarchy = options?.envFileHierarchy || ['.env'];
-      const logs = options?.logs ?? true;
-      const throwErrorOnValidationFail = false;
-      const rootPath = options?.rootPath || path.resolve(__dirname);
-      const envManagerInstance = new EnvironmentManager(() => vine.object({}), {
-        logs,
-        rootPath,
-        throwErrorOnValidationFail,
-        envFileHierarchy,
-      });
-      envManagerInstance.envs = envManagerInstance.collectEnvs();
-      return envManagerInstance as any;
-    }
+  public static getInstance<T extends Record<string, SchemaTypes>>(options?: {
+    logs?: boolean;
+    rootPath?: string;
+    envFileHierarchy?: envFileNames[];
+  }): EnvironmentManager<T> {
+    const envFileHierarchy = options?.envFileHierarchy || ['.env'];
+    const logs = options?.logs ?? true;
+    const throwErrorOnValidationFail = false;
+    const rootPath = options?.rootPath || path.resolve(__dirname);
+    const envManagerInstance = new EnvironmentManager(() => vine.object({}), {
+      logs,
+      rootPath,
+      throwErrorOnValidationFail,
+      envFileHierarchy,
+    });
+    envManagerInstance.envs = envManagerInstance.collectEnvs();
+    return envManagerInstance as any;
+  }
 
   /**
    * @description - This function is used to create the schema for the environment variables
@@ -158,9 +156,9 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
   /**
    * @description - This function is used to get a raw value from the environment variables outside the schema
-   * @param key 
-   * @param defaultValue 
-   * @returns 
+   * @param key
+   * @param defaultValue
+   * @returns
    */
   public getRaw(key: string, defaultValue?: any): string | number | boolean | undefined {
     if (!this.envs) {
