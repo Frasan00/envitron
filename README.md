@@ -6,6 +6,8 @@
 
 ### Schema Based Env Manager
 ```typescript
+import { createEnvSchema } from "envitron";
+
 const env = await createEnvSchema(
   (vine) => {
     return vine.object({
@@ -31,6 +33,8 @@ const outsideSchemaEnv = env.getRaw('NON_SCHEMA_ENV');
 
 ### Schema Less Environment Manager
 ```typescript
+import { getInstance } from "envitron";
+
 const schemaLessEnvManager = getInstance({
   rootPath: __dirname,
   envFileHierarchy: ['.env'],
