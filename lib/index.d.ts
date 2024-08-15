@@ -62,7 +62,6 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 }
 
 declare const getInstance: typeof EnvironmentManager.getInstance;
-
 declare const _default: typeof EnvironmentManager.createEnvSchema;
 
 export { _default as default, getInstance };
