@@ -43,7 +43,7 @@ const schemaLessEnvManager = getInstance({
 // Retrieve all the environment variables
 const allEnvsSchemaLess = schemaLessEnvManager.getAll();
 
-// Retrieve a specific schema environment variable with a default value
+// Retrieve an env from the environment manager
 const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
 ```
 
