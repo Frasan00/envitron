@@ -1,134 +1,44 @@
-type RuleValueTypes = string | number | boolean;
-declare enum RuleValueEnum {
-    string = "string",
-    number = "number",
-    boolean = "boolean",
-    enum = "enum"
-}
-declare abstract class Rule {
-    key: string;
-    valueType: RuleValueEnum;
-    isOptional: boolean;
-    constructor(valueType: RuleValueEnum);
-    validateAndParse(value: RuleValueTypes, rule: Rule): RuleValueTypes | null | undefined;
-    private validateStringRule;
-    private validateNumberRule;
-    private validateEnumRule;
-    private validateBooleanRule;
-}
+import * as _vinejs_vine_build_src_types from '@vinejs/vine/build/src/types';
+import { SchemaTypes } from '@vinejs/vine/build/src/types';
+import * as vineLib from '@vinejs/vine';
+import vineLib__default from '@vinejs/vine';
 
-declare class BooleanRule extends Rule {
-    constructor();
-}
-
-declare class BooleanRuleOptions extends BooleanRule {
-    constructor();
-    optional(): BooleanRule;
-}
-
-declare class EnumRule extends Rule {
-    values: string[];
-    constructor(values: string[]);
-}
-
-declare class EnumRuleOptions extends EnumRule {
-    values: string[];
-    constructor(values: string[]);
-    optional(): EnumRule;
-}
-
-declare class NumberRule extends Rule {
-    constructor();
-}
-
-declare class NumberRuleOptions extends NumberRule {
-    minValue: number;
-    maxValue: number;
-    constructor();
-    min(min: number): NumberRuleOptions;
-    max(max: number): NumberRuleOptions;
-    range(min: number, max: number): NumberRuleOptions;
-    optional(): NumberRule;
-}
-
-declare class StringRule extends Rule {
-    constructor();
-}
-
-declare class StringRuleOptions extends Rule {
-    minLength?: number;
-    maxLength?: number;
-    ip: boolean;
-    url: boolean;
-    email: boolean;
-    pattern?: RegExp;
-    constructor();
-    setMinLength(minLength: number): this;
-    setMaxLength(maxLength: number): this;
-    setIp(): this;
-    mustBeUrl(): this;
-    mustBeEmail(): this;
-    regex(pattern: RegExp): this;
-    optional(): StringRule;
-}
-
+type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vineLib.default.object<Properties>>;
 type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
-declare class EnvSchema {
-    envFileHierarchy: envFileNames[] | envFileNames;
-    throwErrorOnValidationFail: boolean;
-    envFilePath?: string;
-    logs: boolean;
-    /**
-     * @description Schema class is used to define the rules for the environment variables
-     * @description rules - object containing the rules for the environment variables
-     * @description envFileHierarchy - array of strings containing the hierarchy of the env files to be loaded
-     * @description throwErrorOnValidationFail - boolean to determine if an error should be thrown when env validation fails
-     */
-    constructor();
-    /**
-     * @description String rule is used to define environment variables that contain strings
-     * @description Used for simple strings that do not require any special validation, note string envs will be trimmed, if you need to preserve whitespace use the literal rule
-     */
-    string(): StringRuleOptions;
-    /**
-     * @description Number rule is used to define environment variables that contain numbers
-     * @description Used for numbers that require min and max validation
-     * @param options - object containing min or max properties
-     */
-    number(): NumberRuleOptions;
-    /**
-     * @description Enum rule is used to define environment variables that contain a set of predefined values
-     * @description Used for environment variables that must be one of a set of values
-     * @param values - array of strings containing the allowed values
-     */
-    enum(values: string[]): EnumRuleOptions;
-    /**
-     * @description Boolean rule is used to define environment variables that contain boolean values
-     * @description Used for environment variables that must be either true or false
-     */
-    boolean(): BooleanRuleOptions;
-}
-
-type GetEnvDynamicType<T> = T extends 'string' ? string : T extends 'number' ? number : T extends 'boolean' ? boolean : T extends 'enum' ? string : string;
-declare class EnvironmentManager {
-    private rules;
-    private schema;
+declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
+    schema: ReturnTypeObject<T>;
     private rootPath;
     private envs;
     private logs;
+    private throwErrorOnValidationFail;
+    private envFileHierarchy;
     constructor();
+    /**
+     *
+     * @returns - Returns all the environment variables
+     */
+    getAll(): Record<string, string | number | boolean | undefined>;
     /**
      * @description - This function is used to create the schema for the environment variables
      * @param cb - A callback function that returns the schema for the environment variables
      */
-    createEnvSchema(cb: (schema: EnvSchema) => Record<string, Rule>): void;
-    getEnv<Key extends keyof typeof this.rules>(key: Key, defaultValue?: any): GetEnvDynamicType<(typeof this.rules)[Key]['valueType']> | undefined;
-    protected collectEnvs(): Record<string, RuleValueTypes>;
-    protected parseEnvFile(envPath: string): Record<string, RuleValueTypes>;
-    protected validateRequiredEnvs(): void;
-    protected validateEnv(envKey: string, envValue: RuleValueTypes): RuleValueTypes | undefined;
+    createEnvSchema(schemaBuilder: (vineInstance: typeof vineLib__default) => ReturnTypeObject<T>, options?: {
+        logs?: boolean;
+        rootPath?: string;
+        throwErrorOnValidationFail?: boolean;
+        envFileHierarchy?: envFileNames[];
+    }): Promise<void>;
+    /**
+     * @description - This function is used to get a value from the environment variables
+     * @param key
+     * @param defaultValue
+     * @returns
+     */
+    get<K extends keyof T>(key: K, defaultValue?: T[K]): T[K] | undefined;
+    protected collectEnvs(): Record<string, string | number | boolean>;
+    protected parseEnvFile(envPath: string): Record<string, string | number | boolean>;
 }
 
-declare const env: EnvironmentManager;
+declare const env: EnvironmentManager<Record<string, _vinejs_vine_build_src_types.SchemaTypes>>;
 
 export { env as default };

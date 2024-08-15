@@ -1,34 +1,45 @@
 # Environment-manager
-- Simple dotenv manager for node.js
 
-## Create a Schema for you .env file
+- Simple environment manager for node.js
+
+## How To Use
+
+### Schema Based Env Manager
 ```typescript
-import env from 'envitron';
+const env = await createEnvSchema(
+  (vine) => {
+    return vine.object({
+      PORT: vine.number(),
+      NODE_ENV: vine.string(),
+    });
+  },
+  {
+    rootPath: __dirname,
+    envFileHierarchy: ['.env'],
+  }
+);
 
-env.createEnvSchema((schema) => {
-  // Defines the hierarchy of the env files to be loaded, only the first file found will be loaded, default ['.env']
-  // Also a single string with env file name can be set
-  schema.envFileHierarchy = ['.env', '.env.local', '.env.development', '.env.production'];
+// Retrieve all the environment variables
+const allEnvs = env.getAll();
 
-  // A custom path for the env file can be set here, default path.resolve(__dirname)
-  schema.envFilePath = './';
+// Retrieve a specific schema environment variable with a default value
+const schemaBasedNodeEnv = env.get('NODE_ENV', "development");
 
-  // Enable debugging, default true
-  schema.logs = true;
+// Retrieve searching on all the environment variables regardless of the schema
+const outsideSchemaEnv = env.getRaw('NON_SCHEMA_ENV');
+```
 
-  // If set to true, an error will be thrown if an environment variable fails validation
-  schema.throwErrorOnValidationFail = false; // default true
-
-  return {
-    NODE_ENV: schema.enum(['development', 'production', 'test', 'staging']),
-    PORT: schema.number().range(80, 8080),
-    API_URL: schema.string().mustBeUrl(),
-    API_KEY: schema.string().optional(),
-    LOGS: schema.boolean().optional(),
-  };
+### Schema Less Environment Manager
+```typescript
+const schemaLessEnvManager = getInstance({
+  rootPath: __dirname,
+  envFileHierarchy: ['.env'],
 });
 
-// Default value is used if no env with the given name is found
-const NODE_ENV = env.getEnv('NODE_ENV', 'staging');
+// Retrieve all the environment variables
+const allEnvsSchemaLess = schemaLessEnvManager.getAll();
+
+// Retrieve a specific schema environment variable with a default value
+const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
 ```
 
