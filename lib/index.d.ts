@@ -24,7 +24,6 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     getAll(): Record<string, string | number | boolean | undefined>;
     /**
      * @description - Used for schema-less environment variable retrieval
-     * @param cb - A callback function that returns the schema for the environment variables
      */
     static getInstance<T extends Record<string, SchemaTypes>>(options?: {
         logs?: boolean;
@@ -62,6 +61,6 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 }
 
 declare const getInstance: typeof EnvironmentManager.getInstance;
-declare const _default: typeof EnvironmentManager.createEnvSchema;
+declare const createEnvSchema: typeof EnvironmentManager.createEnvSchema;
 
-export { _default as default, getInstance };
+export { createEnvSchema, getInstance };
