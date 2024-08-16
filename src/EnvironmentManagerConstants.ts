@@ -1,18 +1,20 @@
-import vine from '@vinejs/vine';
+import vine, { VineEnum } from '@vinejs/vine';
 import * as vineLib from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
 import { OptionalModifier } from '@vinejs/vine/build/src/schema/base/literal';
 
+// Types
 type ParsedNumber = ReturnType<typeof vine.number>;
 type ParsedString = ReturnType<typeof vine.string>;
 type ParsedBoolean = ReturnType<typeof vine.boolean>;
-type ParsedEnum = ReturnType<typeof vine.enum>;
+type ParsedEnum<T extends readonly (string | number)[]> = VineEnum<T>;
 type ParsedDate = ReturnType<typeof vine.date>;
 
+// Optional types
 type OptionalNumber = OptionalModifier<ParsedNumber>;
 type OptionalString = OptionalModifier<ParsedString>;
 type OptionalBoolean = OptionalModifier<ParsedBoolean>;
-type OptionalEnum = OptionalModifier<ParsedEnum>;
+type OptionalEnum<T extends readonly (string | number)[]> = OptionalModifier<ParsedEnum<T>>;
 type OptionalDate = OptionalModifier<ParsedDate>;
 
 export type envFileNames =
@@ -62,8 +64,8 @@ export type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber
     ? string
     : T[K] extends ParsedBoolean
       ? boolean
-      : T[K] extends ParsedEnum
-        ? string
+      : T[K] extends ParsedEnum<infer U>
+        ? U[number]
         : T[K] extends ParsedDate
           ? Date
           : T[K] extends OptionalNumber
@@ -72,8 +74,8 @@ export type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber
               ? string | undefined
               : T[K] extends OptionalBoolean
                 ? boolean | undefined
-                : T[K] extends OptionalEnum
-                  ? string | undefined
+                : T[K] extends OptionalEnum<infer U>
+                  ? U[number] | undefined
                   : T[K] extends OptionalDate
                     ? Date | undefined
                     : any;
