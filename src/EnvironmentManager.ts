@@ -1,56 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { log } from './Logger';
-import * as vineLib from '@vinejs/vine';
 import vine from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
-
-type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<
-  typeof vineLib.default.object<Properties>
->;
-
-type ParsedNumber = ReturnType<typeof vine.number>;
-type ParsedString = ReturnType<typeof vine.string>;
-type ParsedBoolean = ReturnType<typeof vine.boolean>;
-type ParsedEnum = ReturnType<typeof vine.enum>;
-type ParsedDate = ReturnType<typeof vine.date>;
-
-type envFileNames =
-  | '.env'
-  | '.env.local'
-  | '.env.development'
-  | '.env.production'
-  | '.env.test'
-  | '.env.staging'
-  | '.local.env'
-  | '.development.env'
-  | '.production.env'
-  | '.test.env'
-  | '.staging.env'
-  | '.env.local.local'
-  | '.env.local.development'
-  | '.env.local.production'
-  | '.env.local.test'
-  | '.env.local.staging'
-  | '.env.development.local'
-  | '.env.development.development'
-  | '.env.development.production'
-  | '.env.development.test'
-  | '.env.development.staging'
-  | '.env.production.local'
-  | '.env.production.development'
-  | '.env.production.production'
-  | '.env.production.test'
-  | '.env.production.staging'
-  | '.env.test.local'
-  | '.env.test.development'
-  | '.env.test.production'
-  | '.env.test.test'
-  | '.env.test.staging'
-  | '.env.staging.local'
-  | '.env.staging.development'
-  | '.env.staging.production'
-  | '.env.staging.test';
+import { InferSchemaType, ReturnTypeObject, envFileNames } from './EnvironmentManagerConstants';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   public schema: ReturnTypeObject<T>;
@@ -108,7 +61,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       envFileHierarchy,
     });
     envManagerInstance.envs = envManagerInstance.collectEnvs();
-    return envManagerInstance as any;
+    return envManagerInstance as EnvironmentManager<T>;
   }
 
   /**
@@ -178,17 +131,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     key: K,
     defaultValue?: any,
     schema: ReturnTypeObject<T> = this.schema
-  ): T[K] extends ParsedNumber
-    ? number
-    : T[K] extends ParsedString
-      ? string
-      : T[K] extends ParsedBoolean
-        ? boolean
-        : T[K] extends ParsedEnum
-          ? string
-          : T[K] extends ParsedDate
-            ? Date
-            : any {
+  ): InferSchemaType<T, K> {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
@@ -199,7 +142,12 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     }
 
     // @ts-ignore
-    return schema[key].parse(value);
+    const retrievedEnv = schema[key as string];
+    if (!retrievedEnv) {
+      return value as any;
+    }
+
+    return retrievedEnv.parse(value);
   }
 
   protected collectEnvs(): Record<string, string | number | boolean> {
@@ -241,7 +189,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     const envFile = fs.readFileSync(envPath, 'utf8');
     const envs = envFile.split('\n');
     const envsObject: Record<string, number | string | boolean> = {};
-    const regex = /^(\S+)=\s*(?:"([^"#]*)"|([^#]*))/;
+    const regex = /^(\S+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/;
 
     for (const env of envs) {
       if (env.trim().startsWith('#')) {
@@ -251,17 +199,10 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       const match = env.match(regex);
       if (match) {
         const key = match[1];
-        let value = match[2] || match[3];
-
-        if (!match[2]) {
-          value = value.trim();
+        const value = match[2] || match[3] || match[4];
+        if (value) {
+          envsObject[key] = value;
         }
-
-        if (value === '') {
-          continue;
-        }
-
-        envsObject[key] = value;
       }
     }
 

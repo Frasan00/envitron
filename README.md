@@ -49,3 +49,41 @@ const allEnvsSchemaLess = schemaLessEnvManager.getAll();
 const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
 ```
 
+## Env Example
+
+- To better understand the functionality of the env manager is an example of all handled use cases and resulting values
+
+```dotenv
+PORT=80
+NODE_ENV=development
+DATABASE_URL = " Example "
+API_KEY=' 12345 '
+DEBUG=true
+EMPTY_VALUE=
+QUOTED_EMPTY_VALUE=""
+SINGLE_QUOTED_EMPTY_VALUE=''
+SPACED_KEY = spaced_value
+SPACED_KEY_WITH_QUOTES = " spaced_value "
+MULTILINE_VALUE="This is a
+multiline value"
+SPECIAL_CHARS_IN_VALUE="!@#$%^&*()_+"
+TRAILING_SPACES=trailing_spaces
+```
+
+- Will be parsed into:
+```any
+{
+  PORT: '80',
+  NODE_ENV: 'development',
+  DATABASE_URL: ' Example ',
+  API_KEY: ' 12345 ',
+  DEBUG: 'true',
+  QUOTED_EMPTY_VALUE: undefined,
+  SINGLE_QUOTED_EMPTY_VALUE: undefined,
+  SPACED_KEY: 'spaced_value',
+  SPACED_KEY_WITH_QUOTES: ' spaced_value ',
+  MULTILINE_VALUE: '"This',
+  SPECIAL_CHARS_IN_VALUE: '!@#$%^&*()_+',
+  TRAILING_SPACES: 'trailing_spaces'
+}
+```

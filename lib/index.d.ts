@@ -1,14 +1,22 @@
 import * as vine from '@vinejs/vine';
 import vine__default from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
+import { OptionalModifier } from '@vinejs/vine/build/src/schema/base/literal';
 
-type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vine.default.object<Properties>>;
 type ParsedNumber = ReturnType<typeof vine__default.number>;
 type ParsedString = ReturnType<typeof vine__default.string>;
 type ParsedBoolean = ReturnType<typeof vine__default.boolean>;
 type ParsedEnum = ReturnType<typeof vine__default.enum>;
 type ParsedDate = ReturnType<typeof vine__default.date>;
+type OptionalNumber = OptionalModifier<ParsedNumber>;
+type OptionalString = OptionalModifier<ParsedString>;
+type OptionalBoolean = OptionalModifier<ParsedBoolean>;
+type OptionalEnum = OptionalModifier<ParsedEnum>;
+type OptionalDate = OptionalModifier<ParsedDate>;
 type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
+type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vine.default.object<Properties>>;
+type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum ? string : T[K] extends ParsedDate ? Date : T[K] extends OptionalNumber ? number | undefined : T[K] extends OptionalString ? string | undefined : T[K] extends OptionalBoolean ? boolean | undefined : T[K] extends OptionalEnum ? string | undefined : T[K] extends OptionalDate ? Date | undefined : any;
+
 declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     schema: ReturnTypeObject<T>;
     private rootPath;
@@ -55,7 +63,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      * @param defaultValue
      * @returns
      */
-    get<K extends keyof T>(key: K, defaultValue?: any, schema?: ReturnTypeObject<T>): T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum ? string : T[K] extends ParsedDate ? Date : any;
+    get<K extends keyof T>(key: K, defaultValue?: any, schema?: ReturnTypeObject<T>): InferSchemaType<T, K>;
     protected collectEnvs(): Record<string, string | number | boolean>;
     protected parseEnvFile(envPath: string): Record<string, string | number | boolean>;
 }
