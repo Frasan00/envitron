@@ -16,7 +16,9 @@ const env = await createEnvSchema(
     });
   },
   {
-    rootPath: __dirname,
+    logs: false,
+    throwErrorOnValidationFail: false,
+    rootPath: process.cwd(),
     envFileHierarchy: ['.env'],
   }
 );
