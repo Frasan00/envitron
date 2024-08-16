@@ -1,6 +1,6 @@
 {
   "name": "envitron",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "main": "./lib/index.js",
   "repository": "https://github.com/Frasan00/environment-manager.git",
   "author": "Frasan00 <francesco.sangiovanni.7@gmail.com>",
