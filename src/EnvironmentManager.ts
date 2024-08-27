@@ -22,7 +22,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       envFileHierarchy?: envFileNames[];
     }
   ) {
-    this.rootPath = options?.rootPath || path.resolve(__dirname);
+    this.rootPath = path.resolve(process.cwd(), options?.rootPath || '');
     this.logs = options?.logs ?? true;
     this.throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
     this.envFileHierarchy = options?.envFileHierarchy || ['.env'];
@@ -53,7 +53,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     const envFileHierarchy = options?.envFileHierarchy || ['.env'];
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = false;
-    const rootPath = options?.rootPath || path.resolve(__dirname);
+    const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
     const envManagerInstance = new EnvironmentManager(() => vine.object({}), {
       logs,
       rootPath,
