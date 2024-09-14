@@ -3,12 +3,17 @@ import path from 'path';
 import { log } from './Logger';
 import vine from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
-import { InferSchemaType, ReturnTypeObject, envFileNames } from './EnvironmentManagerConstants';
+import {
+  InferSchemaType,
+  ReturnTypeObject,
+  envFileNames,
+  EnvParsedFileType,
+} from './EnvironmentManagerConstants';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   public schema: ReturnTypeObject<T>;
   private rootPath: string;
-  private envs: Record<string, string | boolean | number | undefined>;
+  private envs: EnvParsedFileType;
   private logs: boolean;
   private throwErrorOnValidationFail: boolean;
   private envFileHierarchy: envFileNames[];
@@ -34,7 +39,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
    *
    * @returns - Returns all the environment variables
    */
-  public getAll(): Record<string, string | number | boolean | undefined> {
+  public getAll(): EnvParsedFileType {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
@@ -150,7 +155,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     return retrievedEnv.parse(value);
   }
 
-  protected collectEnvs(): Record<string, string | number | boolean> {
+  protected collectEnvs(): EnvParsedFileType {
     const envFileHierarchy = this.envFileHierarchy;
     if (typeof envFileHierarchy === 'string') {
       const envPath = `${this.rootPath}/${envFileHierarchy}`;
@@ -185,11 +190,11 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     return {};
   }
 
-  protected parseEnvFile(envPath: string): Record<string, string | number | boolean> {
+  protected parseEnvFile(envPath: string): EnvParsedFileType {
     const envFile = fs.readFileSync(envPath, 'utf8');
     const envs = envFile.split('\n');
-    const envsObject: Record<string, number | string | boolean> = {};
-    const regex = /^(\S+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/;
+    const envsObject: EnvParsedFileType = {};
+    const regex = /^(\S+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\[.*\]|\{.*\}|\S+))/;
 
     for (const env of envs) {
       if (env.trim().startsWith('#')) {
@@ -197,13 +202,34 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       }
 
       const match = env.match(regex);
-      if (match) {
-        const key = match[1];
-        const value = match[2] || match[3] || match[4];
-        if (value) {
-          envsObject[key] = value;
+      if (!match) {
+        continue;
+      }
+
+      const key = match[1];
+      let value: string | any[] = match[2] || match[3] || match[4];
+      if (value === undefined) {
+        continue;
+      }
+
+      // Handle array values
+      if (value.startsWith('[') && value.endsWith(']')) {
+        value = value
+          .slice(1, -1)
+          .split(',')
+          .map((v) => v.trim().replace(/^["']|["']$/g, ''));
+      }
+
+      // Handle object values
+      if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          console.error(`Failed to parse JSON in the environment file for key ${key}: ${value}`);
         }
       }
+
+      envsObject[key] = value;
     }
 
     return envsObject;

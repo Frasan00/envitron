@@ -3,12 +3,19 @@ import * as vineLib from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
 import { OptionalModifier } from '@vinejs/vine/build/src/schema/base/literal';
 
+export type EnvParsedFileType = Record<
+  string,
+  number | string | boolean | any[] | object | undefined
+>;
+
 // Types
 type ParsedNumber = ReturnType<typeof vine.number>;
 type ParsedString = ReturnType<typeof vine.string>;
 type ParsedBoolean = ReturnType<typeof vine.boolean>;
 type ParsedEnum<T extends readonly (string | number)[]> = VineEnum<T>;
 type ParsedDate = ReturnType<typeof vine.date>;
+type ParsedArray<T extends SchemaTypes = any> = ReturnType<typeof vine.array<T>>;
+type ParsedObject<T extends Record<string, SchemaTypes>> = ReturnType<typeof vine.object<T>>;
 
 // Optional types
 type OptionalNumber = OptionalModifier<ParsedNumber>;
@@ -78,4 +85,8 @@ export type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber
                   ? U[number] | undefined
                   : T[K] extends OptionalDate
                     ? Date | undefined
-                    : any;
+                    : T[K] extends ParsedArray<infer U>
+                      ? InferSchemaType<{ item: U }, 'item'>[]
+                        : T[K] extends ParsedObject<infer U>
+                          ? { [P in keyof U]: InferSchemaType<U, P> }
+                          : any;

@@ -3,11 +3,14 @@ import vine__default, { VineEnum } from '@vinejs/vine';
 import { SchemaTypes } from '@vinejs/vine/build/src/types';
 import { OptionalModifier } from '@vinejs/vine/build/src/schema/base/literal';
 
+type EnvParsedFileType = Record<string, number | string | boolean | any[] | object | undefined>;
 type ParsedNumber = ReturnType<typeof vine__default.number>;
 type ParsedString = ReturnType<typeof vine__default.string>;
 type ParsedBoolean = ReturnType<typeof vine__default.boolean>;
 type ParsedEnum<T extends readonly (string | number)[]> = VineEnum<T>;
 type ParsedDate = ReturnType<typeof vine__default.date>;
+type ParsedArray<T extends SchemaTypes> = ReturnType<typeof vine__default.array<T>>;
+type ParsedObject<T extends Record<string, SchemaTypes>> = ReturnType<typeof vine__default.object<T>>;
 type OptionalNumber = OptionalModifier<ParsedNumber>;
 type OptionalString = OptionalModifier<ParsedString>;
 type OptionalBoolean = OptionalModifier<ParsedBoolean>;
@@ -15,7 +18,11 @@ type OptionalEnum<T extends readonly (string | number)[]> = OptionalModifier<Par
 type OptionalDate = OptionalModifier<ParsedDate>;
 type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
 type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vine.default.object<Properties>>;
-type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum<infer U> ? U[number] : T[K] extends ParsedDate ? Date : T[K] extends OptionalNumber ? number | undefined : T[K] extends OptionalString ? string | undefined : T[K] extends OptionalBoolean ? boolean | undefined : T[K] extends OptionalEnum<infer U> ? U[number] | undefined : T[K] extends OptionalDate ? Date | undefined : any;
+type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum<infer U> ? U[number] : T[K] extends ParsedDate ? Date : T[K] extends OptionalNumber ? number | undefined : T[K] extends OptionalString ? string | undefined : T[K] extends OptionalBoolean ? boolean | undefined : T[K] extends OptionalEnum<infer U> ? U[number] | undefined : T[K] extends OptionalDate ? Date | undefined : T[K] extends ParsedArray<infer U> ? InferSchemaType<{
+    item: U;
+}, 'item'>[] : T[K] extends ParsedObject<infer U> ? {
+    [P in keyof U]: InferSchemaType<U, P>;
+} : any;
 
 declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     schema: ReturnTypeObject<T>;
@@ -29,7 +36,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      *
      * @returns - Returns all the environment variables
      */
-    getAll(): Record<string, string | number | boolean | undefined>;
+    getAll(): EnvParsedFileType;
     /**
      * @description - Used for schema-less environment variable retrieval
      */
@@ -64,8 +71,8 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      * @returns
      */
     get<K extends keyof T>(key: K, defaultValue?: any, schema?: ReturnTypeObject<T>): InferSchemaType<T, K>;
-    protected collectEnvs(): Record<string, string | number | boolean>;
-    protected parseEnvFile(envPath: string): Record<string, string | number | boolean>;
+    protected collectEnvs(): EnvParsedFileType;
+    protected parseEnvFile(envPath: string): EnvParsedFileType;
 }
 
 declare const getInstance: typeof EnvironmentManager.getInstance;
