@@ -1,6 +1,7 @@
 # Environment-manager
 
-- Simple environment manager for node.js
+- Environment manager for node.js
+- Built on top of Zod used for schema validation
 
 ## How To Use
 
@@ -9,23 +10,23 @@
 import { createEnvSchema } from "envitron";
 
 const env = await createEnvSchema(
-  (vine) => {
-    return vine.object({
-      NODE_ENV: vine.enum(["development", "production"]),
-      DATABASE_URL: vine.string(),
-      API_KEY: vine.string(),
-      DEBUG: vine.boolean(),
-      EMPTY_VALUE: vine.string(),
-      QUOTED_EMPTY_VALUE: vine.string(),
-      SINGLE_QUOTED_EMPTY_VALUE: vine.string(),
-      SPACED_KEY: vine.string(),
-      SPACED_KEY_WITH_QUOTES: vine.string(),
-      SPECIAL_CHARS_IN_VALUE: vine.string(),
-      TRAILING_SPACES: vine.string(),
-      LIST_OF_VALUES_WITH_QUOTES: vine.array(vine.string()),
-      LIST_OF_VALUES_WITH_SINGLE_QUOTES: vine.array(vine.string()),
-      LIST_OF_VALUES_WITHOUT_QUOTES: vine.array(vine.string()),
-      OBJECT: vine.object({ key: vine.string() }),
+  (z) => {
+    return z.object({
+      NODE_ENV: z.enum(["development", "production"]),
+      DATABASE_URL: z.string().default('postgres://localhost:5432'),
+      API_KEY: z.string(),
+      DEBUG: z.boolean(),
+      EMPTY_VALUE: z.string(),
+      QUOTED_EMPTY_VALUE: z.string(),
+      SINGLE_QUOTED_EMPTY_VALUE: z.string(),
+      SPACED_KEY: z.string(),
+      SPACED_KEY_WITH_QUOTES: z.string(),
+      SPECIAL_CHARS_IN_VALUE: z.string(),
+      TRAILING_SPACES: z.string(),
+      LIST_OF_VALUES_WITH_QUOTES: z.array(z.string()),
+      LIST_OF_VALUES_WITH_SINGLE_QUOTES: z.array(z.string()),
+      LIST_OF_VALUES_WITHOUT_QUOTES: z.array(z.string()),
+      OBJECT: z.object({ key: z.string() }),
     });
   },
   {
@@ -41,6 +42,10 @@ const allEnvs = env.getAll();
 
 // Retrieve a specific schema environment variable with a default value, the type will be inferred from the schema
 const schemaBasedNodeEnv = env.get('NODE_ENV', "development");
+
+// You can define a default value both in the get() method and in the zod schema (defaultValue in the get() method has the priority)
+const databaseUrlWithSchemaDefault = env.get('DATABASE_URL'); // postgres://localhost:5432
+const databaseUrlWithLocalDefault = env.get('DATABASE_URL', "postgres://12.12.12.12:5432"); // postgres://12.12.12.12:5432
 
 // Retrieve searching on all the environment variables regardless of the schema
 const outsideSchemaEnv = env.getRaw('NON_SCHEMA_ENV');
@@ -98,24 +103,17 @@ OBJECT={"key":"value"}
 - Will be parsed into:
 ```any
 {
-  PORT: '80',
   NODE_ENV: 'development',
-  DATABASE_URL: ' Example ',
+  DATABASE_URL: ' DAJEEEEE ',
   API_KEY: ' 12345 ',
   DEBUG: 'true',
-  QUOTED_EMPTY_VALUE: undefined,
-  SINGLE_QUOTED_EMPTY_VALUE: undefined,
   SPACED_KEY: 'spaced_value',
   SPACED_KEY_WITH_QUOTES: ' spaced_value ',
   SPECIAL_CHARS_IN_VALUE: '!@#$%^&*()_+',
   TRAILING_SPACES: 'trailing_spaces',
-  LIST_OF_VALUES_WITH_QUOTES: [ ' example', 'example ' ],
+  LIST_OF_VALUES_WITH_QUOTES: [ '0', '1' ],
   LIST_OF_VALUES_WITH_SINGLE_QUOTES: [ ' example', 'example' ],
   LIST_OF_VALUES_WITHOUT_QUOTES: [ 'example', 'example' ],
   OBJECT: { key: 'value' }
 }
 ```
-
-## Known issues
-
-- optional arrays and objects counted as any while inferring type from the schema with getEnv();

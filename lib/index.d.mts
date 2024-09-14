@@ -1,31 +1,24 @@
-import * as vine from '@vinejs/vine';
-import vine__default, { VineEnum } from '@vinejs/vine';
-import { SchemaTypes } from '@vinejs/vine/build/src/types';
-import { OptionalModifier } from '@vinejs/vine/build/src/schema/base/literal';
+import { z } from 'zod';
 
 type EnvParsedFileType = Record<string, number | string | boolean | any[] | object | undefined>;
-type ParsedNumber = ReturnType<typeof vine__default.number>;
-type ParsedString = ReturnType<typeof vine__default.string>;
-type ParsedBoolean = ReturnType<typeof vine__default.boolean>;
-type ParsedEnum<T extends readonly (string | number)[]> = VineEnum<T>;
-type ParsedDate = ReturnType<typeof vine__default.date>;
-type ParsedArray<T extends SchemaTypes> = ReturnType<typeof vine__default.array<T>>;
-type ParsedObject<T extends Record<string, SchemaTypes>> = ReturnType<typeof vine__default.object<T>>;
-type OptionalNumber = OptionalModifier<ParsedNumber>;
-type OptionalString = OptionalModifier<ParsedString>;
-type OptionalBoolean = OptionalModifier<ParsedBoolean>;
-type OptionalEnum<T extends readonly (string | number)[]> = OptionalModifier<ParsedEnum<T>>;
-type OptionalDate = OptionalModifier<ParsedDate>;
-type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
-type ReturnTypeObject<Properties extends Record<string, SchemaTypes>> = ReturnType<typeof vine.default.object<Properties>>;
-type InferSchemaType<T, K extends keyof T> = T[K] extends ParsedNumber ? number : T[K] extends ParsedString ? string : T[K] extends ParsedBoolean ? boolean : T[K] extends ParsedEnum<infer U> ? U[number] : T[K] extends ParsedDate ? Date : T[K] extends OptionalNumber ? number | undefined : T[K] extends OptionalString ? string | undefined : T[K] extends OptionalBoolean ? boolean | undefined : T[K] extends OptionalEnum<infer U> ? U[number] | undefined : T[K] extends OptionalDate ? Date | undefined : T[K] extends ParsedArray<infer U> ? InferSchemaType<{
+type SchemaTypes = z.ZodTypeAny;
+type InferSchemaType<T, K extends keyof T> = T[K] extends z.ZodNumber ? number : T[K] extends z.ZodString ? string : T[K] extends z.ZodBoolean ? boolean : T[K] extends z.ZodEnum<infer U> ? U[number] : T[K] extends z.ZodDate ? Date : T[K] extends z.ZodOptional<z.ZodNumber> ? number | undefined : T[K] extends z.ZodOptional<z.ZodString> ? string | undefined : T[K] extends z.ZodOptional<z.ZodBoolean> ? boolean | undefined : T[K] extends z.ZodOptional<z.ZodEnum<infer U>> ? U[number] | undefined : T[K] extends z.ZodOptional<z.ZodDate> ? Date | undefined : T[K] extends z.ZodArray<infer U> ? InferSchemaType<{
     item: U;
-}, 'item'>[] : T[K] extends ParsedObject<infer U> ? {
+}, 'item'>[] : T[K] extends z.ZodOptional<z.ZodArray<infer U>> ? InferSchemaType<{
+    item: U;
+}, 'item'>[] | undefined : T[K] extends z.ZodObject<infer U> ? {
     [P in keyof U]: InferSchemaType<U, P>;
-} : any;
+} : T[K] extends z.ZodOptional<z.ZodObject<infer U>> ? {
+    [P in keyof U]: InferSchemaType<U, P>;
+} | undefined : T[K] extends z.ZodRecord<infer U> ? {
+    [key: string]: InferSchemaType<U, keyof U>;
+} : T[K] extends z.ZodOptional<z.ZodRecord<infer U>> ? {
+    [key: string]: InferSchemaType<U, keyof U>;
+} | undefined : T[K] extends z.ZodUnion<infer U> ? U[number] : T[K] extends z.ZodOptional<z.ZodUnion<infer U>> ? U[number] | undefined : T[K] extends z.ZodPromise<infer U> ? InferSchemaType<U, keyof U> : T[K] extends z.ZodOptional<z.ZodPromise<infer U>> ? InferSchemaType<U, keyof U> | undefined : T[K] extends z.ZodLazy<infer U> ? InferSchemaType<U, keyof U> : T[K] extends z.ZodOptional<z.ZodLazy<infer U>> ? InferSchemaType<U, keyof U> | undefined : any;
+type envFileNames = '.env' | '.env.local' | '.env.development' | '.env.production' | '.env.test' | '.env.staging' | '.local.env' | '.development.env' | '.production.env' | '.test.env' | '.staging.env' | '.env.local.local' | '.env.local.development' | '.env.local.production' | '.env.local.test' | '.env.local.staging' | '.env.development.local' | '.env.development.development' | '.env.development.production' | '.env.development.test' | '.env.development.staging' | '.env.production.local' | '.env.production.development' | '.env.production.production' | '.env.production.test' | '.env.production.staging' | '.env.test.local' | '.env.test.development' | '.env.test.production' | '.env.test.test' | '.env.test.staging' | '.env.staging.local' | '.env.staging.development' | '.env.staging.production' | '.env.staging.test';
 
 declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
-    schema: ReturnTypeObject<T>;
+    schema: z.ZodObject<T>;
     private rootPath;
     private envs;
     private logs;
@@ -50,7 +43,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      * @param cb - A callback function that returns the schema for the environment variables
      * @param options - An object that contains the options for the environment manager
      */
-    static createEnvSchema<T extends Record<string, SchemaTypes>>(schemaBuilder: (vineInstance: typeof vine__default) => ReturnTypeObject<T>, options?: {
+    static createEnvSchema<T extends Record<string, SchemaTypes>>(schemaBuilder: (schema: typeof z) => z.ZodObject<T>, options?: {
         logs?: boolean;
         rootPath?: string;
         throwErrorOnValidationFail?: boolean;
@@ -70,7 +63,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      * @param defaultValue
      * @returns
      */
-    get<K extends keyof T>(key: K, defaultValue?: any, schema?: ReturnTypeObject<T>): InferSchemaType<T, K>;
+    get<K extends keyof T>(key: K, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
     protected collectEnvs(): EnvParsedFileType;
     protected parseEnvFile(envPath: string): EnvParsedFileType;
 }

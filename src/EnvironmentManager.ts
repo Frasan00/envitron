@@ -1,17 +1,16 @@
 import fs from 'fs';
 import path from 'path';
-import { log } from './Logger';
-import vine from '@vinejs/vine';
-import { SchemaTypes } from '@vinejs/vine/build/src/types';
+import logger, { log } from './Logger';
 import {
   InferSchemaType,
-  ReturnTypeObject,
   envFileNames,
   EnvParsedFileType,
+  SchemaTypes,
 } from './EnvironmentManagerConstants';
+import { z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
-  public schema: ReturnTypeObject<T>;
+  public schema: z.ZodObject<T>;
   private rootPath: string;
   private envs: EnvParsedFileType;
   private logs: boolean;
@@ -19,7 +18,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   private envFileHierarchy: envFileNames[];
 
   private constructor(
-    schemaBuilder: (vineInstance: typeof vine) => ReturnTypeObject<T>,
+    schemaBuilder: (schema: typeof z) => z.ZodObject<T>,
     options?: {
       logs?: boolean;
       rootPath?: string;
@@ -32,7 +31,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     this.throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
     this.envFileHierarchy = options?.envFileHierarchy || ['.env'];
     this.envs = this.collectEnvs();
-    this.schema = schemaBuilder(vine);
+    this.schema = schemaBuilder(z);
   }
 
   /**
@@ -59,7 +58,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = false;
     const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
-    const envManagerInstance = new EnvironmentManager(() => vine.object({}), {
+    const envManagerInstance = new EnvironmentManager(() => z.object({}) as any, {
       logs,
       rootPath,
       throwErrorOnValidationFail,
@@ -75,7 +74,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
    * @param options - An object that contains the options for the environment manager
    */
   public static async createEnvSchema<T extends Record<string, SchemaTypes>>(
-    schemaBuilder: (vineInstance: typeof vine) => ReturnTypeObject<T>,
+    schemaBuilder: (schema: typeof z) => z.ZodObject<T>,
     options?: {
       logs?: boolean;
       rootPath?: string;
@@ -94,18 +93,14 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       envFileHierarchy,
     });
     envManagerInstance.envs = envManagerInstance.collectEnvs();
-    envManagerInstance.schema = schemaBuilder(vine);
     try {
-      await vine.validate({
-        schema: envManagerInstance.schema,
-        data: envManagerInstance.envs,
-      });
+      await envManagerInstance.schema.parseAsync(envManagerInstance.envs);
     } catch (error: any) {
       if (envManagerInstance.throwErrorOnValidationFail) {
         throw error;
       }
 
-      console.error(error);
+      logger.error(error);
     }
 
     return envManagerInstance;
@@ -135,7 +130,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   public get<K extends keyof T>(
     key: K,
     defaultValue?: any,
-    schema: ReturnTypeObject<T> = this.schema
+    schema: z.ZodObject<T> = this.schema
   ): InferSchemaType<T, K> {
     if (!this.envs) {
       this.envs = this.collectEnvs();
@@ -143,11 +138,10 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
     const value = this.envs[key as string];
     if (value === undefined) {
-      return defaultValue;
+      return defaultValue ?? schema.shape[key as string]._def.defaultValue();
     }
 
-    // @ts-ignore
-    const retrievedEnv = schema[key as string];
+    const retrievedEnv = schema.shape[key as string];
     if (!retrievedEnv) {
       return value as any;
     }
