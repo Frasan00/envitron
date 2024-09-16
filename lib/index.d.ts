@@ -49,21 +49,8 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         throwErrorOnValidationFail?: boolean;
         envFileHierarchy?: envFileNames[];
     }): Promise<EnvironmentManager<T>>;
-    /**
-     * @description - This function is used to get a raw value from the environment variables outside the schema
-     * @param key
-     * @param defaultValue
-     * @returns
-     */
-    getRaw(key: string, defaultValue?: any): string | number | boolean | undefined;
-    /**
-     * @description - This function is used to get a value from the environment variables from the schema
-     * @description - In order to retrieve an outside schema value, use the getRaw function
-     * @param key
-     * @param defaultValue
-     * @returns
-     */
-    get<K extends keyof T>(key: K, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
+    get(key: string, defaultValue?: any): any;
+    get<K extends keyof T>(key: K, defaultValue?: any): InferSchemaType<T, K>;
     protected collectEnvs(): EnvParsedFileType;
     protected parseEnvFile(envPath: string): EnvParsedFileType;
 }

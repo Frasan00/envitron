@@ -48,7 +48,7 @@ const databaseUrlWithSchemaDefault = env.get('DATABASE_URL'); // postgres://loca
 const databaseUrlWithLocalDefault = env.get('DATABASE_URL', "postgres://12.12.12.12:5432"); // postgres://12.12.12.12:5432
 
 // Retrieve searching on all the environment variables regardless of the schema
-const outsideSchemaEnv = env.getRaw('NON_SCHEMA_ENV');
+const outsideSchemaEnv = env.get('NON_SCHEMA_ENV');
 ```
 
 ### Schema Less Environment Manager

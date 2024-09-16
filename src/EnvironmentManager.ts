@@ -106,29 +106,17 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     return envManagerInstance;
   }
 
-  /**
-   * @description - This function is used to get a raw value from the environment variables outside the schema
-   * @param key
-   * @param defaultValue
-   * @returns
-   */
-  public getRaw(key: string, defaultValue?: any): string | number | boolean | undefined {
-    if (!this.envs) {
-      this.envs = this.collectEnvs();
-    }
-
-    return this.envs[key] || defaultValue;
-  }
-
+  public get(key: string, defaultValue?: any): any;
+  public get<K extends keyof T>(key: K, defaultValue?: any): InferSchemaType<T, K>;
   /**
    * @description - This function is used to get a value from the environment variables from the schema
    * @description - In order to retrieve an outside schema value, use the getRaw function
-   * @param key
-   * @param defaultValue
+   * @param key - The key to retrieve from the environment variables
+   * @param defaultValue - The default value to return if the key is not found, has priority over the schema default value
    * @returns
    */
   public get<K extends keyof T>(
-    key: K,
+    key: K | string,
     defaultValue?: any,
     schema: z.ZodObject<T> = this.schema
   ): InferSchemaType<T, K> {
@@ -138,7 +126,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
     const value = this.envs[key as string];
     if (value === undefined) {
-      return defaultValue ?? schema.shape[key as string]._def.defaultValue();
+      return defaultValue ?? schema.shape[key as string]?._def.defaultValue();
     }
 
     const retrievedEnv = schema.shape[key as string];
