@@ -49,13 +49,24 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         throwErrorOnValidationFail?: boolean;
         envFileHierarchy?: envFileNames[];
     }): Promise<EnvironmentManager<T>>;
-    get(key: string, defaultValue?: any): any;
-    get<K extends keyof T>(key: K, defaultValue?: any): InferSchemaType<T, K>;
+    /**
+     * @description - This function is used to get a value from the environment variables from the schema
+     * @description - In order to retrieve an outside schema value, use the getRaw function
+     * @param key - The key to retrieve from the environment variables
+     * @param defaultValue - The default value to return if the key is not found, has priority over the schema default value
+     * @returns
+     */
+    get<K extends keyof T>(key: K, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
+    get<K extends keyof T>(key: string, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
     protected collectEnvs(): EnvParsedFileType;
     protected parseEnvFile(envPath: string): EnvParsedFileType;
 }
 
 declare const getInstance: typeof EnvironmentManager.getInstance;
 declare const createEnvSchema: typeof EnvironmentManager.createEnvSchema;
+declare const _default: {
+    getInstance: typeof EnvironmentManager.getInstance;
+    createEnvSchema: typeof EnvironmentManager.createEnvSchema;
+};
 
-export { createEnvSchema, getInstance };
+export { createEnvSchema, _default as default, getInstance };
