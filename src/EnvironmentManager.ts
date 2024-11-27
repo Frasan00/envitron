@@ -198,7 +198,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       }
 
       const key = match[1];
-      let value: string | any[] = match[2] || match[3] || match[4];
+      let value: string | boolean | any[] = match[2] || match[3] || match[4];
       if (value === undefined) {
         continue;
       }
@@ -218,6 +218,11 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         } catch (e) {
           console.error(`Failed to parse JSON in the environment file for key ${key}: ${value}`);
         }
+      }
+
+      // handle boolean values
+      if (value === 'true' || value === 'false') {
+        value = Boolean(value);
       }
 
       envsObject[key] = value;
