@@ -73,47 +73,43 @@ const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
 - !!! Envs must be defined in a single line regardless of their type !!!
 
 ```dotenv
-// NUMBERS
-PORT=80
-
-// STRINGS 
 NODE_ENV=development
-DATABASE_URL = " Example "
-API_KEY=' 12345 '
+COMMENTED_ENV= #should be undefined
+SEMI_COMMENTED_ENV= sh #ould not be undefined
+DATABASE_URL = " TESTTT "  # Spaces around the value
+API_KEY=' 12345 '          # Spaces around the value with single quotes
 DEBUG=true
+EMPTY_VALUE=
 QUOTED_EMPTY_VALUE=""
 SINGLE_QUOTED_EMPTY_VALUE=''
-SPACED_KEY = spaced_value
-SPACED_KEY_WITH_QUOTES = " spaced_value "
+SPACED_KEY = spaced_value    # Spaces around the key
+SPACED_KEY_WITH_QUOTES = " spaced_value "  # Spaces around the key and value
 SPECIAL_CHARS_IN_VALUE="!@#$%^&*()_+"
 TRAILING_SPACES=trailing_spaces
-
-// EMPTY
-EMPTY_VALUE=
-
-// LISTS (must be defined in square brackets with values separated by commas)
-LIST_OF_VALUES_WITH_QUOTES=[" example", "example "]
+LIST_OF_VALUES_WITH_QUOTES=[0, 1]
 LIST_OF_VALUES_WITH_SINGLE_QUOTES=[' example', "example"]
 LIST_OF_VALUES_WITHOUT_QUOTES=[example, example]
-
-// OBJECTS (NOT ADVISED, must be able to pass a JSON.parse call)
 OBJECT={"key":"value"}
+SINGLE_QUOTED_EMPTY_VALUE=''
 ```
 
 - Will be parsed into:
-```any
+```javascript
 {
   NODE_ENV: 'development',
-  DATABASE_URL: ' DAJEEEEE ',
+  DATABASE_URL: ' TESTTT ',
   API_KEY: ' 12345 ',
-  DEBUG: 'true',
+  DEBUG: true,
+  QUOTED_EMPTY_VALUE: '',
+  SINGLE_QUOTED_EMPTY_VALUE: '',
   SPACED_KEY: 'spaced_value',
   SPACED_KEY_WITH_QUOTES: ' spaced_value ',
   SPECIAL_CHARS_IN_VALUE: '!@#$%^&*()_+',
   TRAILING_SPACES: 'trailing_spaces',
-  LIST_OF_VALUES_WITH_QUOTES: [ '0', '1' ],
-  LIST_OF_VALUES_WITH_SINGLE_QUOTES: [ ' example', 'example' ],
-  LIST_OF_VALUES_WITHOUT_QUOTES: [ 'example', 'example' ],
-  OBJECT: { key: 'value' }
+  LIST_OF_VALUES_WITH_QUOTES: ['0', '1'],
+  LIST_OF_VALUES_WITH_SINGLE_QUOTES: [' example', 'example'],
+  LIST_OF_VALUES_WITHOUT_QUOTES: ['example', 'example'],
+  OBJECT: { key: 'value' },
+  SEMI_COMMENTED_ENV: 'sh'
 }
 ```

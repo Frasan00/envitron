@@ -7,7 +7,7 @@ import {
   EnvParsedFileType,
   SchemaTypes,
 } from './EnvironmentManagerConstants';
-import { z } from 'zod';
+import { Schema, z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   public schema: z.ZodObject<T>;
@@ -32,18 +32,6 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     this.envFileHierarchy = options?.envFileHierarchy || ['.env'];
     this.envs = this.collectEnvs();
     this.schema = schemaBuilder(z);
-  }
-
-  /**
-   *
-   * @returns - Returns all the environment variables
-   */
-  public getAll(): EnvParsedFileType {
-    if (!this.envs) {
-      this.envs = this.collectEnvs();
-    }
-
-    return this.envs;
   }
 
   /**
@@ -146,6 +134,17 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     return retrievedEnv.parse(value);
   }
 
+  /**
+   * @returns - Returns all the environment variables part of the schema
+   */
+    public getAll(schema: z.ZodObject<T> = this.schema): z.infer<typeof schema> & { [key: string]: any } {
+      if (!this.envs) {
+        this.envs = this.collectEnvs();
+      }
+
+      return this.envs as z.infer<typeof schema>;
+    }
+
   protected collectEnvs(): EnvParsedFileType {
     const envFileHierarchy = this.envFileHierarchy;
     if (typeof envFileHierarchy === 'string') {
@@ -188,19 +187,21 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     const regex = /^(\S+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\[.*\]|\{.*\}|\S+))/;
 
     for (const env of envs) {
-      if (env.trim().startsWith('#')) {
-        continue;
-      }
-
       const match = env.match(regex);
       if (!match) {
         continue;
       }
 
+
       const key = match[1];
       let value: string | boolean | any[] = match[2] || match[3] || match[4];
-      if (value === undefined) {
+      if (value && value.trim().startsWith('#')) {
         continue;
+      }
+
+      // Handle "" or ''
+      if (value === undefined) {
+        value = "";
       }
 
       // Handle array values
