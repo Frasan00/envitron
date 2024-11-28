@@ -26,11 +26,6 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     private envFileHierarchy;
     private constructor();
     /**
-     *
-     * @returns - Returns all the environment variables
-     */
-    getAll(): EnvParsedFileType;
-    /**
      * @description - Used for schema-less environment variable retrieval
      */
     static getInstance<T extends Record<string, SchemaTypes>>(options?: {
@@ -58,6 +53,12 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
      */
     get<K extends keyof T>(key: K, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
     get<K extends keyof T>(key: string, defaultValue?: any, schema?: z.ZodObject<T>): InferSchemaType<T, K>;
+    /**
+     * @returns - Returns all the environment variables part of the schema
+     */
+    getAll(schema?: z.ZodObject<T>): z.infer<typeof schema> & {
+        [key: string]: any;
+    };
     protected collectEnvs(): EnvParsedFileType;
     protected parseEnvFile(envPath: string): EnvParsedFileType;
 }
