@@ -7,6 +7,10 @@ export type EnvParsedFileType = Record<
 
 export type SchemaTypes = z.ZodTypeAny;
 
+export type InferSchemaTypeForGetAll<T extends Record<string, SchemaTypes>> = {
+  [K in keyof T]: InferSchemaType<T, K>;
+};
+
 export type InferSchemaType<T, K extends keyof T> = T[K] extends z.ZodNumber
   ? number
   : T[K] extends z.ZodString

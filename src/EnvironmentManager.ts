@@ -6,8 +6,9 @@ import {
   envFileNames,
   EnvParsedFileType,
   SchemaTypes,
+  InferSchemaTypeForGetAll,
 } from './EnvironmentManagerConstants';
-import { Schema, z } from 'zod';
+import { z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   public schema: z.ZodObject<T>;
@@ -137,14 +138,12 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   /**
    * @returns - Returns all the environment variables part of the schema
    */
-  public getAll(
-    schema: z.ZodObject<T> = this.schema
-  ): z.infer<typeof schema> & { [key: string]: any } {
+  public getAll(): InferSchemaTypeForGetAll<T> & { [key: string]: any } {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
 
-    return this.envs as z.infer<typeof schema>;
+    return this.envs as InferSchemaTypeForGetAll<T> & { [key: string]: any };
   }
 
   protected collectEnvs(): EnvParsedFileType {

@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 type EnvParsedFileType = Record<string, number | string | boolean | any[] | object | undefined>;
 type SchemaTypes = z.ZodTypeAny;
+type InferSchemaTypeForGetAll<T extends Record<string, SchemaTypes>> = {
+    [K in keyof T]: InferSchemaType<T, K>;
+};
 type InferSchemaType<T, K extends keyof T> = T[K] extends z.ZodNumber ? number : T[K] extends z.ZodString ? string : T[K] extends z.ZodBoolean ? boolean : T[K] extends z.ZodEnum<infer U> ? U[number] : T[K] extends z.ZodDate ? Date : T[K] extends z.ZodOptional<z.ZodNumber> ? number | undefined : T[K] extends z.ZodOptional<z.ZodString> ? string | undefined : T[K] extends z.ZodOptional<z.ZodBoolean> ? boolean | undefined : T[K] extends z.ZodOptional<z.ZodEnum<infer U>> ? U[number] | undefined : T[K] extends z.ZodOptional<z.ZodDate> ? Date | undefined : T[K] extends z.ZodArray<infer U> ? InferSchemaType<{
     item: U;
 }, 'item'>[] : T[K] extends z.ZodOptional<z.ZodArray<infer U>> ? InferSchemaType<{
@@ -56,7 +59,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     /**
      * @returns - Returns all the environment variables part of the schema
      */
-    getAll(schema?: z.ZodObject<T>): z.infer<typeof schema> & {
+    getAll(): InferSchemaTypeForGetAll<T> & {
         [key: string]: any;
     };
     protected collectEnvs(): EnvParsedFileType;
