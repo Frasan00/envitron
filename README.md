@@ -9,7 +9,7 @@
 ```typescript
 import { createEnvSchema } from "envitron";
 
-const env = await createEnvSchema(
+const env = createEnvSchema(
   (z) => {
     return z.object({
       NODE_ENV: z.enum(["development", "production"]),

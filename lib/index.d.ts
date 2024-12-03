@@ -46,7 +46,7 @@ declare class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         rootPath?: string;
         throwErrorOnValidationFail?: boolean;
         envFileHierarchy?: envFileNames[];
-    }): Promise<EnvironmentManager<T>>;
+    }): EnvironmentManager<T>;
     /**
      * @description - This function is used to get a value from the environment variables from the schema
      * @description - In order to retrieve an outside schema value, use the getRaw function

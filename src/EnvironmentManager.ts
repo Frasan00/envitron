@@ -62,7 +62,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
    * @param cb - A callback function that returns the schema for the environment variables
    * @param options - An object that contains the options for the environment manager
    */
-  public static async createEnvSchema<T extends Record<string, SchemaTypes>>(
+  public static createEnvSchema<T extends Record<string, SchemaTypes>>(
     schemaBuilder: (schema: typeof z) => z.ZodObject<T>,
     options?: {
       logs?: boolean;
@@ -70,7 +70,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       throwErrorOnValidationFail?: boolean;
       envFileHierarchy?: envFileNames[];
     }
-  ): Promise<EnvironmentManager<T>> {
+  ): EnvironmentManager<T> {
     const envFileHierarchy = options?.envFileHierarchy || ['.env'];
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
@@ -83,7 +83,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     });
     envManagerInstance.envs = envManagerInstance.collectEnvs();
     try {
-      await envManagerInstance.schema.parseAsync(envManagerInstance.envs);
+      envManagerInstance.schema.parse(envManagerInstance.envs);
     } catch (error: any) {
       if (envManagerInstance.throwErrorOnValidationFail) {
         throw error;
