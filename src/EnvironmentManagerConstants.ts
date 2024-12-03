@@ -55,7 +55,15 @@ export type InferSchemaType<T, K extends keyof T> = T[K] extends z.ZodNumber
                                           ? InferSchemaType<U, keyof U>
                                           : T[K] extends z.ZodOptional<z.ZodLazy<infer U>>
                                             ? InferSchemaType<U, keyof U> | undefined
-                                            : any;
+                                            : T[K] extends z.ZodDefault<z.ZodString>
+                                              ? string
+                                              : T[K] extends z.ZodDefault<z.ZodNumber>
+                                                ? number
+                                                : T[K] extends z.ZodDefault<z.ZodBoolean>
+                                                  ? boolean
+                                                  : T[K] extends z.ZodDefault<z.ZodEnum<infer U>>
+                                                    ? U[number]
+                                                    : any;
 
 export type envFileNames =
   | '.env'
