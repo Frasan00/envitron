@@ -1,0 +1,6 @@
+test/
+scr/
+.gitignore
+tsconfig.json
+env.example
+yarn.lock
