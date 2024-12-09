@@ -1,7 +1,8 @@
-# Environment-manager
+# Envitron
 
-- Environment manager for node.js
-- Built on top of Zod used for schema validation
+- Environment manager for Node.js
+- Built on top of Zod for schema validation
+- Chose Zod for its user-friendly API and excellent error messages. Although not the fastest, the performance impact is negligible since environment validation occurs only once at application startup.
 
 ## How To Use
 

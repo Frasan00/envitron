@@ -2,11 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import logger, { log } from './Logger';
 import {
-  InferSchemaType,
   envFileNames,
   EnvParsedFileType,
   SchemaTypes,
-  InferSchemaTypeForGetAll,
 } from './EnvironmentManagerConstants';
 import { z } from 'zod';
 
@@ -97,26 +95,22 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
   /**
    * @description - This function is used to get a value from the environment variables from the schema
-   * @description - In order to retrieve an outside schema value, use the getRaw function
-   * @param key - The key to retrieve from the environment variables
-   * @param defaultValue - The default value to return if the key is not found, has priority over the schema default value
-   * @returns
    */
-  public get<K extends keyof T>(
+  public get<K extends keyof z.infer<z.ZodObject<T>>>(
     key: K,
     defaultValue?: any,
     schema?: z.ZodObject<T>
-  ): InferSchemaType<T, K>;
-  public get<K extends keyof T>(
+  ): z.infer<z.ZodObject<T>>[K];
+  public get(
     key: string,
     defaultValue?: any,
     schema?: z.ZodObject<T>
-  ): InferSchemaType<T, K>;
-  public get<K extends keyof T>(
+  ): any;
+  public get<K extends keyof z.infer<z.ZodObject<T>>>(
     key: K,
     defaultValue?: any,
     schema: z.ZodObject<T> = this.schema
-  ): InferSchemaType<T, K> {
+  ): z.infer<z.ZodObject<T>>[K] {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
@@ -138,12 +132,11 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   /**
    * @returns - Returns all the environment variables part of the schema
    */
-  public getAll(): InferSchemaTypeForGetAll<T> & { [key: string]: any } {
+  public getAll(): z.infer<z.ZodObject<T>> & { [key: string]: any } {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
-
-    return this.envs as InferSchemaTypeForGetAll<T> & { [key: string]: any };
+    return this.envs as z.infer<z.ZodObject<T>> & { [key: string]: any };
   }
 
   protected collectEnvs(): EnvParsedFileType {
