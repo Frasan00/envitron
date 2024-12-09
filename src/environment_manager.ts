@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import logger, { log } from './logger';
-import {
-  envFileNames,
-  EnvParsedFileType,
-  SchemaTypes,
-} from './environment_manager_constants';
+import { envFileNames, EnvParsedFileType, SchemaTypes } from './environment_manager_constants';
 import { z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
@@ -98,18 +94,12 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
    */
   public get<K extends keyof z.infer<z.ZodObject<T>>>(
     key: K,
-    defaultValue?: any,
-    schema?: z.ZodObject<T>
+    defaultValue?: any
   ): z.infer<z.ZodObject<T>>[K];
-  public get(
-    key: string,
-    defaultValue?: any,
-    schema?: z.ZodObject<T>
-  ): any;
+  public get(key: string, defaultValue?: any): any;
   public get<K extends keyof z.infer<z.ZodObject<T>>>(
     key: K,
-    defaultValue?: any,
-    schema: z.ZodObject<T> = this.schema
+    defaultValue?: any
   ): z.infer<z.ZodObject<T>>[K] {
     if (!this.envs) {
       this.envs = this.collectEnvs();
@@ -117,11 +107,12 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
     const value = this.envs[key as string];
     if (value === undefined) {
-      const schemaDefaultValue = schema.shape[key as string]?._def.defaultValue?.() ?? undefined;
+      const schemaDefaultValue =
+        this.schema.shape[key as string]?._def.defaultValue?.() ?? undefined;
       return defaultValue ?? schemaDefaultValue;
     }
 
-    const retrievedEnv = schema.shape[key as string];
+    const retrievedEnv = this.schema.shape[key as string];
     if (!retrievedEnv) {
       return value as any;
     }
