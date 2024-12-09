@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import logger, { log } from './Logger';
+import logger, { log } from './logger';
 import {
   envFileNames,
   EnvParsedFileType,
   SchemaTypes,
-} from './EnvironmentManagerConstants';
+} from './environment_manager_constants';
 import { z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
