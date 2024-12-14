@@ -11,7 +11,8 @@
     "format": "prettier --write '**/*.ts'",
     "lint": "standard",
     "lint:fix": "standard --fix",
-    "build": "yarn format && tsup",
+    "build:dev": "yarn format && tsup",
+    "build": "tsup --minify",
     "dev": "ts-node src/index.ts",
     "start": "node lib/index.js",
     "jest": "jest"
