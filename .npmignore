@@ -8,3 +8,4 @@ jest.config.js
 .nvmrc
 logfile.log
 tsup.config.ts
+.github/
