@@ -2,10 +2,10 @@ test/
 src/
 .gitignore
 tsconfig.json
-env.example
 yarn.lock
 jest.config.js
 .nvmrc
 logfile.log
 tsup.config.ts
 .github/
+.env.example
