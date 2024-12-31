@@ -5,7 +5,7 @@ import { envFileNames, EnvParsedFileType, SchemaTypes } from './environment_mana
 import { z } from 'zod';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
-  public schema: z.ZodObject<T>;
+  private schema: z.ZodObject<T>;
   private rootPath: string;
   private envs: EnvParsedFileType;
   private logs: boolean;
@@ -83,7 +83,9 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         throw error;
       }
 
-      logger.error(error);
+      if (envManagerInstance.logs) {
+        logger.error(error);
+      }
     }
 
     return envManagerInstance;

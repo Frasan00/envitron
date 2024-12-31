@@ -87,7 +87,7 @@ SPACED_KEY = spaced_value    # Spaces around the key
 SPACED_KEY_WITH_QUOTES = " spaced_value "  # Spaces around the key and value
 SPECIAL_CHARS_IN_VALUE="!@#$%^&*()_+"
 TRAILING_SPACES=trailing_spaces
-LIST_OF_VALUES_WITH_QUOTES=[0, 1]
+LIST_OF_VALUES_WITH_QUOTES=['0', '1']
 LIST_OF_VALUES_WITH_SINGLE_QUOTES=[' example', "example"]
 LIST_OF_VALUES_WITHOUT_QUOTES=[example, example]
 OBJECT={"key":"value"}
@@ -98,6 +98,7 @@ SINGLE_QUOTED_EMPTY_VALUE=''
 ```javascript
 {
   NODE_ENV: 'development',
+  SEMI_COMMENTED_ENV: 'sh',
   DATABASE_URL: ' TESTTT ',
   API_KEY: ' 12345 ',
   DEBUG: true,
@@ -107,10 +108,9 @@ SINGLE_QUOTED_EMPTY_VALUE=''
   SPACED_KEY_WITH_QUOTES: ' spaced_value ',
   SPECIAL_CHARS_IN_VALUE: '!@#$%^&*()_+',
   TRAILING_SPACES: 'trailing_spaces',
-  LIST_OF_VALUES_WITH_QUOTES: ['0', '1'],
-  LIST_OF_VALUES_WITH_SINGLE_QUOTES: [' example', 'example'],
-  LIST_OF_VALUES_WITHOUT_QUOTES: ['example', 'example'],
-  OBJECT: { key: 'value' },
-  SEMI_COMMENTED_ENV: 'sh'
+  LIST_OF_VALUES_WITH_QUOTES: [ '0', '1' ],
+  LIST_OF_VALUES_WITH_SINGLE_QUOTES: [ ' example', 'example' ],
+  LIST_OF_VALUES_WITHOUT_QUOTES: [ 'example', 'example' ],
+  OBJECT: { key: 'value' }
 }
 ```
