@@ -66,7 +66,9 @@ test('env manager', async () => {
   expect(env.get('OBJECT')).toEqual({ key: 'value' });
   expect(env.get('COMMENTED_ENV')).toBe(undefined);
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
-  expect(env.get('PRIVATE_KEY')).toBe(`-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----`);
+  expect(env.get('PRIVATE_KEY')).toBe(
+    `-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----`
+  );
 
   const allEnvs = env.all();
   logger.info(JSON.stringify(allEnvs, null, 2));

@@ -26,4 +26,3 @@ export type SchemaBuilderType<T extends Record<string, SchemaTypes>> = (
 ) => z.ZodObject<T>;
 
 export type SchemaTypes = z.ZodTypeAny;
-

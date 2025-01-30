@@ -5,7 +5,7 @@ import {
   CreateEnvSchemaOptions,
   EnvParsedFileType,
   SchemaBuilderType,
-  SchemaTypes
+  SchemaTypes,
 } from './environment_manager_constants';
 import logger, { log } from './logger';
 
