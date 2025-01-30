@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import { createEnvSchema, getInstance } from '../src/index';
+import { createEnvSchema } from '../src/index';
+import logger from '../src/logger';
 
 beforeAll(async () => {
   const envContent = fs.readFileSync('.env.example', 'utf-8');
@@ -17,7 +18,7 @@ afterAll(() => {
 });
 
 test('env manager', async () => {
-  const env = await createEnvSchema((z) =>
+  const env = createEnvSchema((z) =>
     z.object({
       DEFAULT_ENUM: z.enum(['test', 'test2']).default('test'),
       DEFAULT_STRING: z.string().default('test'),
@@ -66,11 +67,11 @@ test('env manager', async () => {
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
 
   const allEnvs = env.getAll();
-  console.log(allEnvs);
+  logger.info(JSON.stringify(allEnvs, null, 2));
 });
 
 test('Single Instance', async () => {
-  const env = getInstance();
+  const env = createEnvSchema();
 
   expect(env.get('NODE_ENV')).toBe('development');
   expect(env.get('DATABASE_URL')).toBe(' TESTTT ');
@@ -91,5 +92,5 @@ test('Single Instance', async () => {
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
 
   const allEnvs = env.getAll();
-  console.log(allEnvs);
+  logger.info(JSON.stringify(allEnvs, null, 2));
 });

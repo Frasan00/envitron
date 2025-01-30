@@ -54,10 +54,10 @@ const outsideSchemaEnv = env.get('NON_SCHEMA_ENV');
 
 ### Schema Less Environment Manager
 ```typescript
-import { getInstance } from "envitron";
+import { createEnvSchema } from "envitron";
 
-const schemaLessEnvManager = getInstance({
-  rootPath: __dirname,
+const schemaLessEnvManager = createEnvSchema({
+  rootPath: process.cwd(),
   envFileHierarchy: ['.env'],
 });
 
