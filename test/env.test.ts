@@ -71,7 +71,7 @@ test('env manager', async () => {
 });
 
 test('Single Instance', async () => {
-  const env = createEnvSchema();
+  const env = createEnvSchema({ loadProcessEnv: true });
 
   expect(env.get('NODE_ENV')).toBe('development');
   expect(env.get('DATABASE_URL')).toBe(' TESTTT ');
@@ -90,6 +90,7 @@ test('Single Instance', async () => {
   expect(env.get('OBJECT')).toEqual({ key: 'value' });
   expect(env.get('COMMENTED_ENV')).toBe(undefined);
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
+  expect(process.env.NODE_ENV).toBe('development');
 
   const allEnvs = env.getAll();
   logger.info(JSON.stringify(allEnvs, null, 2));
