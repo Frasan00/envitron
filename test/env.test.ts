@@ -40,6 +40,7 @@ test('env manager', async () => {
       LIST_OF_VALUES_WITH_QUOTES: z.array(z.union([z.string(), z.number()])).optional(),
       LIST_OF_VALUES_WITH_SINGLE_QUOTES: z.array(z.string()).optional(),
       LIST_OF_VALUES_WITHOUT_QUOTES: z.array(z.string()).optional(),
+      PRIVATE_KEY: z.string().optional(),
       OBJECT: z
         .object({
           key: z.string(),
@@ -65,8 +66,9 @@ test('env manager', async () => {
   expect(env.get('OBJECT')).toEqual({ key: 'value' });
   expect(env.get('COMMENTED_ENV')).toBe(undefined);
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
+  expect(env.get('PRIVATE_KEY')).toBe(`-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----`);
 
-  const allEnvs = env.getAll();
+  const allEnvs = env.all();
   logger.info(JSON.stringify(allEnvs, null, 2));
 });
 
@@ -92,6 +94,6 @@ test('Single Instance', async () => {
   expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
   expect(process.env.NODE_ENV).toBe('development');
 
-  const allEnvs = env.getAll();
+  const allEnvs = env.all();
   logger.info(JSON.stringify(allEnvs, null, 2));
 });

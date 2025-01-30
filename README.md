@@ -39,7 +39,7 @@ const env = createEnvSchema(
 );
 
 // Retrieve all the environment variables
-const allEnvs = env.getAll();
+const allEnvs = env.all();
 
 // Retrieve a specific schema environment variable with a default value, the type will be inferred from the schema
 const schemaBasedNodeEnv = env.get('NODE_ENV', "development");
@@ -62,7 +62,7 @@ const schemaLessEnvManager = createEnvSchema({
 });
 
 // Retrieve all the environment variables
-const allEnvsSchemaLess = schemaLessEnvManager.getAll();
+const allEnvsSchemaLess = schemaLessEnvManager.all();
 
 // Retrieve an env from the environment manager
 const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
@@ -91,7 +91,7 @@ LIST_OF_VALUES_WITH_QUOTES=['0', '1']
 LIST_OF_VALUES_WITH_SINGLE_QUOTES=[' example', "example"]
 LIST_OF_VALUES_WITHOUT_QUOTES=[example, example]
 OBJECT={"key":"value"}
-SINGLE_QUOTED_EMPTY_VALUE=''
+PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----"
 ```
 
 - Will be parsed into:
@@ -111,6 +111,7 @@ SINGLE_QUOTED_EMPTY_VALUE=''
   LIST_OF_VALUES_WITH_QUOTES: [ '0', '1' ],
   LIST_OF_VALUES_WITH_SINGLE_QUOTES: [ ' example', 'example' ],
   LIST_OF_VALUES_WITHOUT_QUOTES: [ 'example', 'example' ],
-  OBJECT: { key: 'value' }
+  OBJECT: { key: 'value' },
+  PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----"
 }
 ```

@@ -1,14 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import logger, { log } from './logger';
+import { z } from 'zod';
 import {
   CreateEnvSchemaOptions,
-  envFileNames,
   EnvParsedFileType,
   SchemaBuilderType,
-  SchemaTypes,
+  SchemaTypes
 } from './environment_manager_constants';
-import { z } from 'zod';
+import logger, { log } from './logger';
 
 export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   private schema: z.ZodObject<T>;
@@ -16,7 +15,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   private envs: EnvParsedFileType;
   private logs: boolean;
   private throwErrorOnValidationFail: boolean;
-  private envFileHierarchy: envFileNames[];
+  private envFileHierarchy: string[];
 
   private constructor(
     schemaBuilder: (schema: typeof z) => z.ZodObject<T>,
@@ -24,7 +23,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       logs?: boolean;
       rootPath?: string;
       throwErrorOnValidationFail?: boolean;
-      envFileHierarchy?: envFileNames[];
+      envFileHierarchy?: string[];
     }
   ) {
     this.rootPath = path.resolve(process.cwd(), options?.rootPath || '');
@@ -129,7 +128,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   /**
    * @returns - Returns all the environment variables part of the schema
    */
-  getAll(): z.infer<z.ZodObject<T>> & { [key: string]: any } {
+  all(): z.infer<z.ZodObject<T>> & { [key: string]: any } {
     if (!this.envs) {
       this.envs = this.collectEnvs();
     }
@@ -212,9 +211,14 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         }
       }
 
-      // handle boolean values
+      // Handle boolean values
       if (value === 'true' || value === 'false') {
         value = Boolean(value);
+      }
+
+      // Handle escaped newlines
+      if (typeof value === 'string') {
+        value = value.replace(/\\n/g, '\n');
       }
 
       envsObject[key] = value;
