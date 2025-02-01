@@ -68,6 +68,32 @@ const allEnvsSchemaLess = schemaLessEnvManager.all();
 const nodeEnv = schemaLessEnvManager.get('NODE_ENV', "development");
 ```
 
+### Set Environment Variables
+- You can set environment variables at runtime, but they will not be saved to the .env file
+```typescript
+import { createEnvSchema } from "envitron";
+
+const env = createEnvSchema(
+  (z) => {
+    return z.object({
+      NODE_ENV: z.enum(["development", "production"]),
+    });
+  },
+  {
+    logs: false,
+    throwErrorOnValidationFail: false,
+    rootPath: process.cwd(),
+    envFileHierarchy: ['.env'],
+  }
+);
+
+// Set an environment variable
+env.set('NODE_ENV', 'production');
+
+// Retrieve the updated environment variable
+const updatedNodeEnv = env.get('NODE_ENV');
+```
+
 ## Env Example
 
 - To better understand the functionality of the env manager is an example of all handled use cases and resulting values

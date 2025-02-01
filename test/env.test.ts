@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { createEnvSchema } from '../src/index';
-import logger from '../src/logger';
+import { log } from '../src/logger';
 
 beforeAll(async () => {
   const envContent = fs.readFileSync('.env.example', 'utf-8');
@@ -71,7 +71,8 @@ test('env manager', async () => {
   );
 
   const allEnvs = env.all();
-  logger.info(JSON.stringify(allEnvs, null, 2));
+  env.get('LIST_OF_VALUES_WITH_QUOTES');
+  log(JSON.stringify(allEnvs, null, 2), true);
 });
 
 test('Single Instance', async () => {
@@ -97,5 +98,45 @@ test('Single Instance', async () => {
   expect(process.env.NODE_ENV).toBe('development');
 
   const allEnvs = env.all();
-  logger.info(JSON.stringify(allEnvs, null, 2));
+  log(JSON.stringify(allEnvs, null, 2), true);
+});
+
+test('set env', async () => {
+  const env = createEnvSchema((z) =>
+    z.object({
+      DEFAULT_ENUM: z.enum(['test', 'test2']).default('test'),
+      DEFAULT_STRING: z.string().default('test'),
+      DEFAULT_NUM: z.number().default(1),
+      DEFAULT_BOOLEAN: z.boolean().default(false),
+      NODE_ENV: z.string().optional(),
+      COMMENTED_ENV: z.string().optional(),
+      SEMI_COMMENTED_ENV: z.string().optional(),
+      DATABASE_URL: z.string().optional(),
+      API_KEY: z.string().optional(),
+      DEBUG: z.boolean().optional(),
+      EMPTY_VALUE: z.string().optional(),
+      QUOTED_EMPTY_VALUE: z.string().optional(),
+      SINGLE_QUOTED_EMPTY_VALUE: z.string().optional(),
+      SPACED_KEY: z.string().optional(),
+      SPACED_KEY_WITH_QUOTES: z.string().optional(),
+      SPECIAL_CHARS_IN_VALUE: z.string().optional(),
+      TRAILING_SPACES: z.string().optional(),
+      LIST_OF_VALUES_WITH_QUOTES: z.array(z.union([z.string(), z.number()])).optional(),
+      LIST_OF_VALUES_WITH_SINGLE_QUOTES: z.array(z.string()).optional(),
+      LIST_OF_VALUES_WITHOUT_QUOTES: z.array(z.string()).optional(),
+      PRIVATE_KEY: z.string().optional(),
+      OBJECT: z
+        .object({
+          key: z.string(),
+        })
+        .optional(),
+    })
+  );
+
+  env.set('NODE_ENV', 'development');
+  expect(env.get('NODE_ENV')).toBe('development');
+  env.set('NODE_ENV', 'test');
+  expect(env.get('NODE_ENV')).toBe('test');
+  env.set('NODE_ENV', 'development');
+  expect(env.get('NODE_ENV')).toBe('development');
 });

@@ -50,15 +50,22 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
     schemaBuilderOrOptions?: SchemaBuilderType<T> | CreateEnvSchemaOptions,
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T> {
-    if (!(typeof schemaBuilderOrOptions === 'function')) {
-      return EnvironmentManager.getStandaloneInstance<T>(schemaBuilderOrOptions);
-    }
-
     const envFileHierarchy = options?.envFileHierarchy || ['.env'];
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
     const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
+    if (!(typeof schemaBuilderOrOptions === 'function')) {
+      return EnvironmentManager.getStandaloneInstance<T>({
+        ...schemaBuilderOrOptions,
+        envFileHierarchy,
+        logs,
+        throwErrorOnValidationFail,
+        rootPath,
+      });
+    }
+
     const envManagerInstance = new EnvironmentManager(schemaBuilderOrOptions, {
+      ...options,
       logs,
       rootPath,
       throwErrorOnValidationFail,
@@ -74,7 +81,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       }
 
       if (envManagerInstance.logs) {
-        logger.error(error);
+        logger.logError(error);
       }
     }
 
@@ -83,10 +90,10 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
         ...process.env,
         ...Object.keys(envManagerInstance.envs).reduce(
           (acc, key) => {
-            acc[key] = envManagerInstance.envs[key]?.toString() as string;
+            acc[key] = envManagerInstance.envs[key];
             return acc;
           },
-          {} as Record<string, string>
+          {} as Record<string, any>
         ),
       };
     }
@@ -97,19 +104,14 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   /**
    * @description - This function is used to get a value from the environment variables from the schema
    */
+  get<K extends keyof z.infer<z.ZodObject<T>>>(key: K): z.infer<z.ZodObject<T>>[K];
   get<K extends keyof z.infer<z.ZodObject<T>>>(
     key: K,
-    defaultValue?: any
-  ): z.infer<z.ZodObject<T>>[K];
-  get(key: string, defaultValue?: any): any;
-  get<K extends keyof z.infer<z.ZodObject<T>>>(
-    key: K,
-    defaultValue?: any
-  ): z.infer<z.ZodObject<T>>[K] {
-    if (!this.envs) {
-      this.envs = this.collectEnvs();
-    }
-
+    defaultValue: Exclude<z.infer<z.ZodObject<T>>[K], undefined>
+  ): Exclude<z.infer<z.ZodObject<T>>[K], undefined>;
+  get(key: string): string | undefined;
+  get(key: string, defaultValue: string): string;
+  get<K extends keyof z.infer<z.ZodObject<T>>>(key: K | string, defaultValue?: any): any {
     const value = this.envs[key as string];
     if (value === undefined) {
       const schemaDefaultValue =
@@ -126,13 +128,21 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   }
 
   /**
+   * @description - This function is used to set a value in the environment variables
+   */
+  set<K extends keyof z.infer<z.ZodObject<T>>>(key: K, value: z.infer<z.ZodObject<T>>[K]): void;
+  set(key: string, value: any): void;
+  set<K extends keyof z.infer<z.ZodObject<T>>>(
+    key: K | string,
+    value: z.infer<z.ZodObject<T>>[K] | any
+  ): void {
+    this.envs[key as string] = value;
+  }
+
+  /**
    * @returns - Returns all the environment variables part of the schema
    */
   all(): z.infer<z.ZodObject<T>> & { [key: string]: any } {
-    if (!this.envs) {
-      this.envs = this.collectEnvs();
-    }
-
     return this.envs as z.infer<z.ZodObject<T>> & { [key: string]: any };
   }
 
@@ -233,29 +243,17 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   private static getStandaloneInstance<T extends Record<string, SchemaTypes>>(
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T> {
-    const envFileHierarchy = options?.envFileHierarchy || ['.env'];
-    const logs = options?.logs ?? true;
-    const throwErrorOnValidationFail = false;
-    const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
-    const envManagerInstance = new EnvironmentManager(() => z.object({}) as any, {
-      logs,
-      rootPath,
-      throwErrorOnValidationFail,
-      envFileHierarchy,
-    });
-
-    const envs = envManagerInstance.collectEnvs();
-    envManagerInstance.envs = envs;
+    const envManagerInstance = new EnvironmentManager(() => z.object({}), options);
 
     if (options?.loadProcessEnv) {
       process.env = {
         ...process.env,
-        ...Object.keys(envs).reduce(
+        ...Object.keys(envManagerInstance.envs).reduce(
           (acc, key) => {
-            acc[key] = envs[key]?.toString() as string;
+            acc[key] = envManagerInstance.envs[key];
             return acc;
           },
-          {} as Record<string, string>
+          {} as Record<string, any>
         ),
       };
     }

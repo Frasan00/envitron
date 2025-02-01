@@ -1,5 +1,3 @@
-import winston from 'winston';
-
 interface LogColors {
   info: string;
   warn: string;
@@ -13,31 +11,22 @@ const colors: LogColors = {
   error: '\x1b[31m',
 };
 
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(({ level, message, timestamp }) => {
-    const color = colors[level] || '\x1b[0m';
-    return `${timestamp} ${color}${level}\x1b[0m: ${color}${message}\x1b[0m`;
-  })
-);
-
-const consoleTransport = new winston.transports.Console();
-
-const logger = winston.createLogger({
-  format: logFormat,
-  transports: [consoleTransport],
-});
+function formatLog(level: string, message: string): string {
+  const timestamp = new Date().toISOString();
+  const color = colors[level] || '\x1b[0m';
+  return `${timestamp} ${color}${level}\x1b[0m: ${color}${message}\x1b[0m`;
+}
 
 export function log(message: string, logs: boolean) {
   if (!logs) {
     return;
   }
 
-  logger.info(message);
+  console.log(formatLog('info', message));
 }
 
 export function logError(error: Error, message?: string) {
-  logger.error(message ? `${message}: ${error.message}` : '');
+  console.error(formatLog('error', message ? `${message}: ${error.message}` : error.message));
 }
 
-export default logger;
+export default { log, logError };
