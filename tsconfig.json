@@ -10,7 +10,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "moduleResolution": "node",
-    "types": ["jest", "node"],
+    "types": ["vitest", "node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "lib", "dist", "build"]

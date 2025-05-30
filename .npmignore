@@ -9,3 +9,8 @@ logfile.log
 tsup.config.ts
 .github/
 .env.example
+tsup.config.ts
+vitest.config.ts
+.env.example
+.env
+docs-site

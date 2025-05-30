@@ -1,63 +1,71 @@
 import fs from 'fs';
 import path from 'path';
-import { z } from 'zod';
 import {
   CreateEnvSchemaOptions,
   EnvParsedFileType,
   SchemaBuilderType,
-  SchemaTypes,
 } from './environment_manager_constants';
+import { MissingRequiredEnvError, WrongTypeError } from './envitron_error';
 import logger, { log } from './logger';
+import { Schema } from './schema/schema';
+import {
+  EnvironmentSchemaTypes,
+  EnvValidationCallback,
+  InferEnvCallbackType,
+} from './schema/schema_types';
 
-export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
-  private schema: z.ZodObject<T>;
+export default class EnvironmentManager<
+  T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
+> {
+  private schemaDefinition: T;
   private rootPath: string;
   private envs: EnvParsedFileType;
   private logs: boolean;
   private throwErrorOnValidationFail: boolean;
-  private envFileHierarchy: string[];
+  private envFile: string | string[] | RegExp;
 
   private constructor(
-    schemaBuilder: (schema: typeof z) => z.ZodObject<T>,
+    schemaBuilder: (schema: Schema) => T,
     options?: {
       logs?: boolean;
       rootPath?: string;
       throwErrorOnValidationFail?: boolean;
-      envFileHierarchy?: string[];
+      envFile: string | string[] | RegExp;
     }
   ) {
     this.rootPath = path.resolve(process.cwd(), options?.rootPath || '');
     this.logs = options?.logs ?? true;
     this.throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
-    this.envFileHierarchy = options?.envFileHierarchy || ['.env'];
+    this.envFile = options?.envFile || ['.env'];
     this.envs = this.collectEnvs();
-    this.schema = schemaBuilder(z);
+    this.schemaDefinition = schemaBuilder(new Schema());
   }
 
   /**
    * @description - This function is used to create the schema for the environment variables
+   * @description - Automatically loads the environment variables and parses them using the schema
    * @param cb - A callback function that returns the schema for the environment variables
    * @param options - An object that contains the options for the environment manager
    */
-  static createEnvSchema<T extends Record<string, SchemaTypes>>(
+  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T>;
-  static createEnvSchema<T extends Record<string, SchemaTypes>>(
+  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     schemaBuilder: SchemaBuilderType<T>,
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T>;
-  static createEnvSchema<T extends Record<string, SchemaTypes>>(
+  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     schemaBuilderOrOptions?: SchemaBuilderType<T> | CreateEnvSchemaOptions,
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T> {
-    const envFileHierarchy = options?.envFileHierarchy || ['.env'];
+    const envFile = options?.envFile || '.env';
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
     const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
     if (!(typeof schemaBuilderOrOptions === 'function')) {
       return EnvironmentManager.getStandaloneInstance<T>({
         ...schemaBuilderOrOptions,
-        envFileHierarchy,
+        envFile,
         logs,
         throwErrorOnValidationFail,
         rootPath,
@@ -69,12 +77,12 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       logs,
       rootPath,
       throwErrorOnValidationFail,
-      envFileHierarchy,
+      envFile,
     });
 
     envManagerInstance.envs = envManagerInstance.collectEnvs();
     try {
-      envManagerInstance.schema.parse(envManagerInstance.envs);
+      envManagerInstance.validateEnvs();
     } catch (error: any) {
       if (envManagerInstance.throwErrorOnValidationFail) {
         throw error;
@@ -85,7 +93,7 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       }
     }
 
-    if (options?.loadProcessEnv) {
+    if (options?.loadFromProcessEnv) {
       process.env = {
         ...process.env,
         ...Object.keys(envManagerInstance.envs).reduce(
@@ -103,53 +111,48 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
 
   /**
    * @description - This function is used to get a value from the environment variables from the schema
+   * @description - If the value is not found, it will return the default value if provided
+   * @warning - If the value is not found and no default value is provided, it will return empty string to mimic the behavior of process.env since provided envs are always present even if they are not set
    */
-  get<K extends keyof z.infer<z.ZodObject<T>>>(key: K): z.infer<z.ZodObject<T>>[K];
-  get<K extends keyof z.infer<z.ZodObject<T>>>(
+  get<K extends keyof T>(key: K): InferEnvCallbackType<T[K]>;
+  get<K extends keyof T>(
     key: K,
-    defaultValue: Exclude<z.infer<z.ZodObject<T>>[K], undefined>
-  ): Exclude<z.infer<z.ZodObject<T>>[K], undefined>;
+    defaultValue: InferEnvCallbackType<T[K]>
+  ): InferEnvCallbackType<T[K]>;
   get(key: string): string | undefined;
   get(key: string, defaultValue: string): string;
-  get<K extends keyof z.infer<z.ZodObject<T>>>(key: K | string, defaultValue?: any): any {
+  get<K extends keyof T>(key: K | string, defaultValue?: any): any {
     const value = this.envs[key as string];
+    if (value === '' && defaultValue === undefined) {
+      return undefined;
+    }
+
     if (value === undefined) {
-      const schemaDefaultValue =
-        this.schema.shape[key as string]?._def.defaultValue?.() ?? undefined;
-      return defaultValue ?? schemaDefaultValue;
+      return defaultValue;
     }
 
-    const retrievedEnv = this.schema.shape[key as string];
-    if (!retrievedEnv) {
-      return value as any;
-    }
-
-    return retrievedEnv.parse(value);
+    return value;
   }
 
   /**
    * @description - This function is used to set a value in the environment variables
    */
-  set<K extends keyof z.infer<z.ZodObject<T>>>(key: K, value: z.infer<z.ZodObject<T>>[K]): void;
+  set<K extends keyof T>(key: K, value: T[K]): void;
   set(key: string, value: any): void;
-  set<K extends keyof z.infer<z.ZodObject<T>>>(
-    key: K | string,
-    value: z.infer<z.ZodObject<T>>[K] | any
-  ): void {
+  set<K extends keyof T>(key: K | string, value: T[K] | any): void {
     this.envs[key as string] = value;
   }
 
   /**
    * @returns - Returns all the environment variables part of the schema
    */
-  all(): z.infer<z.ZodObject<T>> & { [key: string]: any } {
-    return this.envs as z.infer<z.ZodObject<T>> & { [key: string]: any };
+  all(): { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any } {
+    return this.envs as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any };
   }
 
   private collectEnvs(): EnvParsedFileType {
-    const envFileHierarchy = this.envFileHierarchy;
-    if (typeof envFileHierarchy === 'string') {
-      const envPath = `${this.rootPath}/${envFileHierarchy}`;
+    if (typeof this.envFile === 'string') {
+      const envPath = path.join(this.rootPath, this.envFile);
       if (!fs.existsSync(envPath) && !this.throwErrorOnValidationFail) {
         log(`Environment file not found: ${envPath}`, this.logs);
         return {};
@@ -162,76 +165,106 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
       return this.parseEnvFile(envPath);
     }
 
-    for (const envFile of envFileHierarchy) {
-      const envPath = `${this.rootPath}/${envFile}`;
-      if (!fs.existsSync(envPath)) {
-        log(`Environment file not found: ${envPath}`, this.logs);
-        log(`Trying next environment file...`, this.logs);
-        continue;
+    if (Array.isArray(this.envFile)) {
+      const mergedEnvs: EnvParsedFileType = {};
+      for (const envFile of this.envFile) {
+        const envPath = path.resolve(this.rootPath, envFile);
+        if (!fs.existsSync(envPath)) {
+          continue;
+        }
+
+        const parsed = this.parseEnvFile(envPath);
+        Object.assign(mergedEnvs, parsed);
       }
 
-      return this.parseEnvFile(envPath);
+      return mergedEnvs;
     }
 
-    if (this.throwErrorOnValidationFail) {
-      throw new Error('Environment file not found');
-    }
-
-    log('No environment file in the hierarchy list found', this.logs);
+    log('[Envitron] No environment provided', this.logs);
     return {};
   }
 
-  private parseEnvFile(envPath: string): EnvParsedFileType {
+  private validateEnvs(): void {
+    for (const schemaKey in this.schemaDefinition) {
+      if (!this.envs[schemaKey]) {
+        continue;
+      }
+
+      const envValue = this.envs[schemaKey] as string;
+      const envParser = this.schemaDefinition[schemaKey];
+      const res = envParser(envValue);
+      if (!this.throwErrorOnValidationFail) {
+        if (res.error?.type === 'required_and_missing') {
+          log(new MissingRequiredEnvError(schemaKey).message, this.logs);
+        }
+
+        if (res.error?.type === 'wrong_type') {
+          log(
+            new WrongTypeError(schemaKey, envValue, res.error.expectedType, res.error.foundType!)
+              .message,
+            this.logs
+          );
+        }
+
+        continue;
+      }
+
+      if (res.error?.type === 'required_and_missing') {
+        throw new MissingRequiredEnvError(schemaKey);
+      }
+
+      if (res.error?.type === 'wrong_type') {
+        throw new WrongTypeError(schemaKey, envValue, res.error.expectedType, res.error.foundType!);
+      }
+
+      this.envs[schemaKey] = res.value as string;
+    }
+  }
+
+  /**
+   * @description - This function is used to parse the environment file, it will return an object with the environment variables
+   */
+  parseEnvFile(envPath: string): EnvParsedFileType {
     const envFile = fs.readFileSync(envPath, 'utf8');
-    const envs = envFile.split('\n');
     const envsObject: EnvParsedFileType = {};
-    const regex = /^(\S+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\[.*\]|\{.*\}|\S+))/;
 
-    for (const env of envs) {
-      const match = env.match(regex);
-      if (!match) {
-        continue;
-      }
+    const regex =
+      /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/gm;
 
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(envFile)) !== null) {
       const key = match[1];
-      let value: string | boolean | any[] = match[2] || match[3] || match[4];
-      if (value && value.trim().startsWith('#')) {
-        continue;
-      }
+      let value = match[2]?.trim() || '';
 
-      // Handle "" or ''
-      if (value === undefined) {
-        value = '';
-      }
+      // Remove surrounding quotes if any
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'")) ||
+        (value.startsWith('`') && value.endsWith('`'))
+      ) {
+        const quoteType = value[0];
+        value = value.slice(1, -1);
 
-      // Handle array values
-      if (value.startsWith('[') && value.endsWith(']')) {
-        value = value
-          .slice(1, -1)
-          .split(',')
-          .map((v) => v.trim().replace(/^["']|["']$/g, ''));
-      }
-
-      // Handle object values
-      if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-        try {
-          value = JSON.parse(value);
-        } catch (e) {
-          console.error(`Failed to parse JSON in the environment file for key ${key}: ${value}`);
+        // Handle escape sequences only if double-quoted
+        if (quoteType === '"') {
+          value = value
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\t/g, '\t')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
         }
       }
 
-      // Handle boolean values
-      if (value === 'true' || value === 'false') {
-        value = Boolean(value);
+      if (value.includes(',')) {
+        envsObject[key] = value
+          .split(',')
+          .map((v) => v.trim())
+          .join(',');
+      } else {
+        envsObject[key] = value;
       }
-
-      // Handle escaped newlines
-      if (typeof value === 'string') {
-        value = value.replace(/\\n/g, '\n');
-      }
-
-      envsObject[key] = value;
     }
 
     return envsObject;
@@ -240,12 +273,15 @@ export default class EnvironmentManager<T extends Record<string, SchemaTypes>> {
   /**
    * @description - Used for schema-less environment variable retrieval
    */
-  private static getStandaloneInstance<T extends Record<string, SchemaTypes>>(
+  private static getStandaloneInstance<T extends Record<string, EnvironmentSchemaTypes>>(
     options?: CreateEnvSchemaOptions
   ): EnvironmentManager<T> {
-    const envManagerInstance = new EnvironmentManager(() => z.object({}), options);
+    const envManagerInstance = new EnvironmentManager(() => ({}), {
+      ...options,
+      envFile: options?.envFile || '.env',
+    });
 
-    if (options?.loadProcessEnv) {
+    if (options?.loadFromProcessEnv) {
       process.env = {
         ...process.env,
         ...Object.keys(envManagerInstance.envs).reduce(

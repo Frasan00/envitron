@@ -1,142 +1,131 @@
 import fs from 'node:fs';
 import { createEnvSchema } from '../src/index';
-import { log } from '../src/logger';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
-beforeAll(async () => {
-  const envContent = fs.readFileSync('.env.example', 'utf-8');
-  if (fs.existsSync('.env')) {
-    fs.unlinkSync('.env');
-  }
+describe('EnvironmentManager (integration)', () => {
+  beforeAll(() => {
+    const envContent = fs.readFileSync('.env.example', 'utf-8');
+    if (fs.existsSync('.env')) fs.unlinkSync('.env');
+    fs.writeFileSync('.env', envContent);
+  });
 
-  fs.writeFileSync('.env', envContent);
-});
+  afterAll(() => {
+    if (fs.existsSync('.env')) fs.unlinkSync('.env');
+  });
 
-afterAll(() => {
-  if (fs.existsSync('.env')) {
-    fs.unlinkSync('.env');
-  }
-});
-
-test('env manager', async () => {
-  const env = createEnvSchema((z) =>
-    z.object({
-      DEFAULT_ENUM: z.enum(['test', 'test2']).default('test'),
-      DEFAULT_STRING: z.string().default('test'),
-      DEFAULT_NUM: z.number().default(1),
-      DEFAULT_BOOLEAN: z.boolean().default(false),
-      NODE_ENV: z.string().optional(),
-      COMMENTED_ENV: z.string().optional(),
-      SEMI_COMMENTED_ENV: z.string().optional(),
-      DATABASE_URL: z.string().optional(),
-      API_KEY: z.string().optional(),
-      DEBUG: z.boolean().optional(),
-      EMPTY_VALUE: z.string().optional(),
-      QUOTED_EMPTY_VALUE: z.string().optional(),
-      SINGLE_QUOTED_EMPTY_VALUE: z.string().optional(),
-      SPACED_KEY: z.string().optional(),
-      SPACED_KEY_WITH_QUOTES: z.string().optional(),
-      SPECIAL_CHARS_IN_VALUE: z.string().optional(),
-      TRAILING_SPACES: z.string().optional(),
-      LIST_OF_VALUES_WITH_QUOTES: z.array(z.union([z.string(), z.number()])).optional(),
-      LIST_OF_VALUES_WITH_SINGLE_QUOTES: z.array(z.string()).optional(),
-      LIST_OF_VALUES_WITHOUT_QUOTES: z.array(z.string()).optional(),
-      PRIVATE_KEY: z.string().optional(),
-      OBJECT: z
-        .object({
-          key: z.string(),
-        })
-        .optional(),
-    })
+  // Initialize schema once for all tests
+  const env = createEnvSchema(
+    (schema) => ({
+      BOOLEAN: schema.boolean(),
+      EMPTY_BOOLEAN: schema.boolean({ optional: true }),
+      FLOAT: schema.number(),
+      NUMBER: schema.number(),
+      EMPTY_NUMBER: schema.number({ optional: true }),
+      QUOTED_NUMBER: schema.number(),
+      DEFAULT_ENUM: schema.enum(['test', 'test2'] as const),
+      DEFAULT_STRING: schema.string(),
+      DEFAULT_NUM: schema.number(),
+      DEFAULT_BOOLEAN: schema.boolean(),
+      FOO: schema.string(),
+      // string edge cases
+      QUOTED1: schema.string(),
+      QUOTED2: schema.string(),
+      QUOTED3: schema.string(),
+      QUOTED4: schema.string(),
+      UNQUOTED_SPACES: schema.string(),
+      EMPTY: schema.string(),
+      ONLY_SPACES: schema.string(),
+      EQUALS: schema.string(),
+      HASH_VALUE: schema.string(),
+      DOT_KEY: schema.string(),
+      DASH_KEY: schema.string(),
+      UNDERSCORE_KEY: schema.string(),
+      KEY123: schema.string(),
+      MULTI_EQUALS: schema.string(),
+      TRAILING: schema.string(),
+      NOVALUE: schema.string({ optional: true }),
+      JUST_QUOTE: schema.string(),
+      JUST_DQUOTE: schema.string(),
+      JUST_HASH: schema.string(),
+      JUST_COMMA: schema.string(),
+      JUST_SPACE: schema.string(),
+      QUOTED_SPACE: schema.string(),
+      QUOTED_HASH: schema.string(),
+      QUOTED_COMMA: schema.string(),
+      QUOTED_EQUALS: schema.string(),
+      QUOTED_NEWLINE: schema.string(),
+      QUOTED_TAB: schema.string(),
+      ESCAPED_NEWLINE: schema.string(),
+      ESCAPED_TAB: schema.string(),
+      ESCAPED_BACKSLASH: schema.string(),
+      CSV: schema.array(),
+      CSV_QUOTED: schema.array(),
+      CSV_SINGLE_QUOTED: schema.array(),
+      ARRAY_DOUBLE_QUOTE: schema.array(),
+      ARRAY_SINGLE_QUOTE: schema.array(),
+      EMPTY_ARRAY: schema.array({ optional: true }),
+    }),
+    {
+      envFile: '.env',
+      rootPath: './lib',
+    }
   );
 
-  expect(env.get('NODE_ENV')).toBe('development');
-  expect(env.get('DATABASE_URL')).toBe(' TESTTT ');
-  expect(env.get('API_KEY')).toBe(' 12345 ');
-  expect(env.get('DEBUG')).toBe(true);
-  expect(env.get('EMPTY_VALUE')).toBe(undefined);
-  expect(env.get('QUOTED_EMPTY_VALUE')).toBe('');
-  expect(env.get('SINGLE_QUOTED_EMPTY_VALUE')).toBe('');
-  expect(env.get('SPACED_KEY')).toBe('spaced_value');
-  expect(env.get('SPACED_KEY_WITH_QUOTES')).toBe(' spaced_value ');
-  expect(env.get('SPECIAL_CHARS_IN_VALUE')).toBe('!@#$%^&*()_+');
-  expect(env.get('TRAILING_SPACES')).toBe('trailing_spaces');
-  expect(env.get('LIST_OF_VALUES_WITH_QUOTES')).toEqual(['0', '1']);
-  expect(env.get('LIST_OF_VALUES_WITH_SINGLE_QUOTES')).toEqual([' example', 'example']);
-  expect(env.get('LIST_OF_VALUES_WITHOUT_QUOTES')).toEqual(['example', 'example']);
-  expect(env.get('OBJECT')).toEqual({ key: 'value' });
-  expect(env.get('COMMENTED_ENV')).toBe(undefined);
-  expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
-  expect(env.get('PRIVATE_KEY')).toBe(
-    `-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfZ3z1Zz9z\n-----END PRIVATE KEY-----`
-  );
+  test('parses basic types and defaults', () => {
+    expect(env.get('BOOLEAN')).toBe(true);
+    expect(env.get('EMPTY_BOOLEAN')).toBeUndefined();
+    expect(env.get('NUMBER')).toBe(123);
+    expect(env.get('FLOAT')).toBe(12.142);
+    expect(env.get('EMPTY_NUMBER')).toBeUndefined();
+    expect(env.get('QUOTED_NUMBER')).toBe(123);
+    expect(env.get('DEFAULT_ENUM', 'test2')).toBe('test2');
+    expect(env.get('DEFAULT_STRING', 'hello world')).toBe('hello world');
+    expect(env.get('DEFAULT_NUM', 42)).toBe(42);
+    expect(env.get('DEFAULT_BOOLEAN', false)).toBe(false);
+    expect(env.get('FOO', 'bar')).toBe('bar');
+  });
 
-  const allEnvs = env.all();
-  env.get('LIST_OF_VALUES_WITH_QUOTES');
-  log(JSON.stringify(allEnvs, null, 2), true);
-});
+  test('handles string edge cases', () => {
+    expect(env.get('JUST_QUOTE')).toBeUndefined();
+    expect(env.get('JUST_DQUOTE')).toBeUndefined();
+    expect(env.get('JUST_HASH')).toBeUndefined();
+    expect(env.get('JUST_COMMA')).toBe(',');
+    expect(env.get('JUST_SPACE')).toBeUndefined();
+    expect(env.get('QUOTED_SPACE')).toBe(' ');
+    expect(env.get('QUOTED_HASH')).toBe('#');
+    expect(env.get('QUOTED_COMMA')).toBe(',');
+    expect(env.get('QUOTED_EQUALS')).toBe('=');
+    expect(env.get('QUOTED_NEWLINE')).toBe('\n');
+    expect(env.get('QUOTED_TAB')).toBe('\t');
+    expect(env.get('UNQUOTED_SPACES')).toBe('some value with spaces');
+    expect(env.get('EMPTY')).toBeUndefined();
+  });
 
-test('Single Instance', async () => {
-  const env = createEnvSchema({ loadProcessEnv: true });
+  test('parses arrays and optional array fallback', () => {
+    expect(env.get('ARRAY_DOUBLE_QUOTE')).toEqual(['single', '123', 'double double', '1 mixed']);
+    expect(env.get('ARRAY_SINGLE_QUOTE')).toEqual(['single', '123', 'double double', '1 mixed']);
+    expect(env.get('CSV')).toEqual(['foo', 'bar', 'baz']);
+    expect(env.get('CSV_QUOTED')).toEqual(['foo', 'bar', 'baz']);
+    expect(env.get('CSV_SINGLE_QUOTED')).toEqual(['foo', 'bar', 'baz']);
+    expect(env.get('EMPTY_ARRAY')).toBeUndefined();
+    expect(env.get('EMPTY_ARRAY', ['fallback'])).toEqual(['fallback']);
+  });
 
-  expect(env.get('NODE_ENV')).toBe('development');
-  expect(env.get('DATABASE_URL')).toBe(' TESTTT ');
-  expect(env.get('API_KEY')).toBe(' 12345 ');
-  expect(env.get('DEBUG')).toBe(true);
-  expect(env.get('EMPTY_VALUE')).toBe(undefined);
-  expect(env.get('QUOTED_EMPTY_VALUE')).toBe('');
-  expect(env.get('SINGLE_QUOTED_EMPTY_VALUE')).toBe('');
-  expect(env.get('SPACED_KEY')).toBe('spaced_value');
-  expect(env.get('SPACED_KEY_WITH_QUOTES')).toBe(' spaced_value ');
-  expect(env.get('SPECIAL_CHARS_IN_VALUE')).toBe('!@#$%^&*()_+');
-  expect(env.get('TRAILING_SPACES')).toBe('trailing_spaces');
-  expect(env.get('LIST_OF_VALUES_WITH_QUOTES')).toEqual(['0', '1']);
-  expect(env.get('LIST_OF_VALUES_WITH_SINGLE_QUOTES')).toEqual([' example', 'example']);
-  expect(env.get('LIST_OF_VALUES_WITHOUT_QUOTES')).toEqual(['example', 'example']);
-  expect(env.get('OBJECT')).toEqual({ key: 'value' });
-  expect(env.get('COMMENTED_ENV')).toBe(undefined);
-  expect(env.get('SEMI_COMMENTED_ENV')).toBe('sh');
-  expect(process.env.NODE_ENV).toBe('development');
+  test('get() with explicit defaults', () => {
+    expect(env.get('NOVALUE', 'default')).toBe('default');
+    expect(env.get('JUST_COMMA', 'default')).toBe(',');
+    expect(env.get('QUOTED_COMMA', 'default')).toBe(',');
+    expect(env.get('QUOTED_NEWLINE', 'default')).toBe('\n');
+  });
 
-  const allEnvs = env.all();
-  log(JSON.stringify(allEnvs, null, 2), true);
-});
-
-test('set env', async () => {
-  const env = createEnvSchema((z) =>
-    z.object({
-      DEFAULT_ENUM: z.enum(['test', 'test2']).default('test'),
-      DEFAULT_STRING: z.string().default('test'),
-      DEFAULT_NUM: z.number().default(1),
-      DEFAULT_BOOLEAN: z.boolean().default(false),
-      NODE_ENV: z.string().optional(),
-      COMMENTED_ENV: z.string().optional(),
-      SEMI_COMMENTED_ENV: z.string().optional(),
-      DATABASE_URL: z.string().optional(),
-      API_KEY: z.string().optional(),
-      DEBUG: z.boolean().optional(),
-      EMPTY_VALUE: z.string().optional(),
-      QUOTED_EMPTY_VALUE: z.string().optional(),
-      SINGLE_QUOTED_EMPTY_VALUE: z.string().optional(),
-      SPACED_KEY: z.string().optional(),
-      SPACED_KEY_WITH_QUOTES: z.string().optional(),
-      SPECIAL_CHARS_IN_VALUE: z.string().optional(),
-      TRAILING_SPACES: z.string().optional(),
-      LIST_OF_VALUES_WITH_QUOTES: z.array(z.union([z.string(), z.number()])).optional(),
-      LIST_OF_VALUES_WITH_SINGLE_QUOTES: z.array(z.string()).optional(),
-      LIST_OF_VALUES_WITHOUT_QUOTES: z.array(z.string()).optional(),
-      PRIVATE_KEY: z.string().optional(),
-      OBJECT: z
-        .object({
-          key: z.string(),
-        })
-        .optional(),
-    })
-  );
-
-  env.set('NODE_ENV', 'development');
-  expect(env.get('NODE_ENV')).toBe('development');
-  env.set('NODE_ENV', 'test');
-  expect(env.get('NODE_ENV')).toBe('test');
-  env.set('NODE_ENV', 'development');
-  expect(env.get('NODE_ENV')).toBe('development');
+  test('all() and set()', () => {
+    const allEnvs = env.all();
+    Object.keys(allEnvs).forEach((key) => {
+      env.set(key, 'new value');
+    });
+    const updated = env.all();
+    Object.values(updated).forEach((val) => {
+      expect(val).toBe('new value');
+    });
+  });
 });
