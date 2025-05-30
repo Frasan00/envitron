@@ -14,3 +14,4 @@ vitest.config.ts
 .env.example
 .env
 docs-site
+vitest.conf.ts
