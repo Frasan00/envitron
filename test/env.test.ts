@@ -128,4 +128,26 @@ describe('EnvironmentManager (integration)', () => {
       expect(val).toBe('new value');
     });
   });
+
+  test('embedded environment variables', () => {
+    expect(env.BOOLEAN).toBe(true);
+    expect(env.EMPTY_BOOLEAN).toBeUndefined();
+    expect(env.FLOAT).toBe(12.142);
+    expect(env.NUMBER).toBe(123);
+    expect(env.EMPTY_NUMBER).toBeUndefined();
+    expect(env.QUOTED_NUMBER).toBe(123);
+    expect(env.FOO).toBe('bar');
+    expect(env.QUOTED1).toBe('double quoted');
+    expect(env.QUOTED2).toBe('single quoted');
+    expect(env.QUOTED3).toBe('with spaces and !@#$%^&*()');
+    expect(env.UNQUOTED_SPACES).toBe('some value with spaces');
+    expect(env.EMPTY).toBeUndefined();
+    expect(env.ONLY_SPACES).toBeUndefined();
+    expect(env.EQUALS).toBe('foo=bar=baz');
+    expect(env.HASH_VALUE).toBeUndefined();
+    expect(env['DOT.KEY']).toBe('dot');
+    expect(env['DASH-KEY']).toBe('dash');
+    expect(env['UNDERSCORE_KEY']).toBe('underscore');
+    expect(env.KEY123).toBe('number');
+  });
 });

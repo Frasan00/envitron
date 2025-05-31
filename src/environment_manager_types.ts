@@ -1,5 +1,10 @@
+import EnvironmentManager from './environment_manager';
 import { Schema } from './schema/schema';
-import { EnvironmentSchemaTypes } from './schema/schema_types';
+import type {
+  EnvironmentSchemaTypes,
+  EnvValidationCallback,
+  InferEnvCallbackType,
+} from './schema/schema_types';
 
 /**
  * @description - An object that contains the parsed environment variables
@@ -36,6 +41,7 @@ export type CreateEnvSchemaOptions = {
   /**
    * @description - A boolean that determines if the process.env should be loaded into the environment manager - defaults to false
    * @description Fills from the environment variables that are already set in the process.env object
+   * @warning - This will override the environment variables from the environment files if a conflict occurs
    * @example - export NOVALUE=123 && node index.js
    * ```ts
    * const env = createEnvSchema((schema) => {
@@ -56,3 +62,9 @@ export type CreateEnvSchemaOptions = {
 export type SchemaBuilderType<T extends Record<string, EnvironmentSchemaTypes>> = (
   schema: Schema
 ) => T;
+
+export type AugmentedEnvironmentManager<
+  T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
+> = EnvironmentManager<T> & {
+  [K in keyof T]: InferEnvCallbackType<T[K]>;
+};

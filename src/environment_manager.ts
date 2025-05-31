@@ -1,14 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import {
+import type {
+  AugmentedEnvironmentManager,
   CreateEnvSchemaOptions,
   EnvParsedFileType,
   SchemaBuilderType,
-} from './environment_manager_constants';
+} from './environment_manager_types';
 import { MissingRequiredEnvError, WrongTypeError } from './envitron_error';
 import logger, { log } from './logger';
 import { Schema } from './schema/schema';
-import {
+import type {
   EnvironmentSchemaTypes,
   EnvValidationCallback,
   InferEnvCallbackType,
@@ -22,7 +23,7 @@ export default class EnvironmentManager<
   private envs: EnvParsedFileType;
   private logs: boolean;
   private throwErrorOnValidationFail: boolean;
-  private envFile: string | string[] | RegExp;
+  private envFile: string | string[];
 
   private constructor(
     schemaBuilder: (schema: Schema) => T,
@@ -30,7 +31,7 @@ export default class EnvironmentManager<
       logs?: boolean;
       rootPath?: string;
       throwErrorOnValidationFail?: boolean;
-      envFile: string | string[] | RegExp;
+      envFile: string | string[];
     }
   ) {
     this.rootPath = path.resolve(process.cwd(), options?.rootPath || '');
@@ -49,15 +50,19 @@ export default class EnvironmentManager<
    */
   static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     options?: CreateEnvSchemaOptions
-  ): EnvironmentManager<T>;
+  ): AugmentedEnvironmentManager<T>;
   static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     schemaBuilder: SchemaBuilderType<T>,
     options?: CreateEnvSchemaOptions
-  ): EnvironmentManager<T>;
+  ): AugmentedEnvironmentManager<T>;
   static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
     schemaBuilderOrOptions?: SchemaBuilderType<T> | CreateEnvSchemaOptions,
     options?: CreateEnvSchemaOptions
-  ): EnvironmentManager<T> {
+  ): AugmentedEnvironmentManager<T> {
+    if (!(typeof schemaBuilderOrOptions === 'function')) {
+      options = schemaBuilderOrOptions;
+    }
+
     const envFile = options?.envFile || '.env';
     const logs = options?.logs ?? true;
     const throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
@@ -69,7 +74,7 @@ export default class EnvironmentManager<
         logs,
         throwErrorOnValidationFail,
         rootPath,
-      });
+      }) as AugmentedEnvironmentManager<T>;
     }
 
     const envManagerInstance = new EnvironmentManager(schemaBuilderOrOptions, {
@@ -94,19 +99,18 @@ export default class EnvironmentManager<
     }
 
     if (options?.loadFromProcessEnv) {
-      process.env = {
-        ...process.env,
-        ...Object.keys(envManagerInstance.envs).reduce(
-          (acc, key) => {
-            acc[key] = envManagerInstance.envs[key];
-            return acc;
-          },
-          {} as Record<string, any>
-        ),
-      };
+      Object.entries(envManagerInstance.envs).forEach(([key, value]) => {
+        envManagerInstance.envs[key] = value;
+      });
     }
 
-    return envManagerInstance;
+    return Object.keys(envManagerInstance.envs).reduce(
+      (acc, key) => {
+        acc[key as keyof T] = envManagerInstance.get(key) as InferEnvCallbackType<T[keyof T]>;
+        return acc;
+      },
+      envManagerInstance as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }
+    ) as AugmentedEnvironmentManager<T>;
   }
 
   /**
@@ -138,22 +142,24 @@ export default class EnvironmentManager<
   }
 
   /**
-   * @returns - Returns all the environment variables part of the schema
+   * @returns - Returns all the environment variables part of the schema parsed
    */
   all(): { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any } {
-    return this.envs as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any };
+    return Object.keys(this.envs).reduce(
+      (acc, key) => {
+        acc[key as keyof T] = this.get(key) as InferEnvCallbackType<T[keyof T]>;
+        return acc;
+      },
+      {} as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }
+    );
   }
 
   private collectEnvs(): EnvParsedFileType {
     if (typeof this.envFile === 'string') {
       const envPath = path.join(this.rootPath, this.envFile);
-      if (!fs.existsSync(envPath) && !this.throwErrorOnValidationFail) {
-        log(`Environment file not found: ${envPath}`, this.logs);
-        return {};
-      }
-
       if (!fs.existsSync(envPath)) {
-        throw new Error(`Environment file not found: ${envPath}`);
+        log(`[Envitron] Environment file not found: ${envPath}`, this.logs);
+        return {};
       }
 
       return this.parseEnvFile(envPath);
@@ -164,6 +170,7 @@ export default class EnvironmentManager<
       for (const envFile of this.envFile) {
         const envPath = path.resolve(this.rootPath, envFile);
         if (!fs.existsSync(envPath)) {
+          log(`[Envitron] Environment file not found: ${envPath}`, this.logs);
           continue;
         }
 
@@ -276,16 +283,9 @@ export default class EnvironmentManager<
     });
 
     if (options?.loadFromProcessEnv) {
-      process.env = {
-        ...process.env,
-        ...Object.keys(envManagerInstance.envs).reduce(
-          (acc, key) => {
-            acc[key] = envManagerInstance.envs[key];
-            return acc;
-          },
-          {} as Record<string, any>
-        ),
-      };
+      Object.entries(process.env).forEach(([key, value]) => {
+        envManagerInstance.envs[key] = value;
+      });
     }
 
     return envManagerInstance as EnvironmentManager<T>;
