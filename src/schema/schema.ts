@@ -195,12 +195,12 @@ export class Schema {
    */
   array<T = string, O extends boolean = false>(
     options?: EnvironmentSchemaTypeOptions<O>
-  ): EnvValidationCallback<O extends true ? EnvironmentArray<T> | undefined : EnvironmentArray<T>> {
+  ): EnvValidationCallback<O extends true ? EnvironmentArray | undefined : EnvironmentArray> {
     return (value: string | undefined) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<
-            O extends true ? EnvironmentArray<T> | undefined : EnvironmentArray<T>
+            O extends true ? EnvironmentArray | undefined : EnvironmentArray
           >,
           error: this.isRequired(options) ? { type: 'required_and_missing' } : undefined,
         };
@@ -209,7 +209,7 @@ export class Schema {
       if (Array.isArray(value)) {
         return {
           value: value as InferType<
-            O extends true ? EnvironmentArray<T> | undefined : EnvironmentArray<T>
+            O extends true ? EnvironmentArray | undefined : EnvironmentArray
           >,
         };
       }
@@ -218,7 +218,7 @@ export class Schema {
       if (!Array.isArray(parsedValue)) {
         return {
           value: undefined as InferType<
-            O extends true ? EnvironmentArray<T> | undefined : EnvironmentArray<T>
+            O extends true ? EnvironmentArray | undefined : EnvironmentArray
           >,
           error: {
             type: 'wrong_type',
@@ -229,10 +229,10 @@ export class Schema {
         };
       }
 
-      const finalValue = parsedValue as EnvironmentArray<T>;
+      const finalValue = parsedValue as EnvironmentArray;
       return {
         value: finalValue as InferType<
-          O extends true ? EnvironmentArray<T> | undefined : EnvironmentArray<T>
+          O extends true ? EnvironmentArray | undefined : EnvironmentArray
         >,
       };
     };

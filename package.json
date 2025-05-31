@@ -1,6 +1,6 @@
 {
   "name": "envitron",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "main": "./lib/index.js",
   "repository": "https://github.com/Frasan00/environment-manager.git",
   "author": "Frasan00 <francesco.sangiovanni.7@gmail.com>",
@@ -15,7 +15,8 @@
     "build": "tsup --minify",
     "dev": "ts-node src/index.ts",
     "test": "yarn format && rm -rf ./lib && yarn build && touch ./lib/.env && cp ./.env.example ./lib/.env && yarn jest",
-    "jest": "vitest"
+    "jest": "vitest",
+    "prepare": "husky"
   },
   "eslintConfig": {
     "extends": [
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.20",
+    "husky": "^9.1.7",
     "prettier": "^3.1.0",
     "tsc": "^2.0.4",
     "tsup": "^8.0.2",

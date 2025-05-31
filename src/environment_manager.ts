@@ -123,15 +123,9 @@ export default class EnvironmentManager<
   get(key: string, defaultValue: string): string;
   get<K extends keyof T>(key: K | string, defaultValue?: any): any {
     const value = this.envs[key as string];
-    if (value === '' && defaultValue === undefined) {
-      return undefined;
-    }
-
-    if (value === undefined) {
-      return defaultValue;
-    }
-
-    return value;
+    // By default, we return undefined if the value is empty string
+    const parsedValue = value === '' ? undefined : value;
+    return parsedValue ?? defaultValue;
   }
 
   /**
