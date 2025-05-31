@@ -1,6 +1,7 @@
 import {
   EnvironmentArray,
   EnvironmentBoolean,
+  EnvironmentCustom,
   EnvironmentEnum,
   EnvironmentNumber,
   EnvironmentSchemaTypeOptions,
@@ -238,8 +239,46 @@ export class Schema {
     };
   }
 
+  /**
+   * @description - A function that validates a custom environment variable
+   * @param validator - A function that validates a custom environment variable from the raw value from the environment
+   * @returns A function that validates a custom environment variable
+   */
+  custom<T, O extends boolean = false>(
+    validator: (value: string | undefined) => T,
+    options?: EnvironmentSchemaTypeOptions<O>
+  ): EnvValidationCallback<
+    O extends true ? EnvironmentCustom<T> | undefined : EnvironmentCustom<T>
+  > {
+    if (typeof validator !== 'function') {
+      throw new Error('[Envitron] - Validator must be a function');
+    }
+
+    return (value: string | undefined) => {
+      if (this.nonExistingValue(value)) {
+        return {
+          value: undefined as InferType<
+            O extends true ? EnvironmentCustom<T> | undefined : EnvironmentCustom<T>
+          >,
+          error: this.isRequired(options) ? { type: 'required_and_missing' } : undefined,
+        };
+      }
+
+      const result = validator(value);
+      return {
+        value: result as InferType<
+          O extends true ? EnvironmentCustom<T> | undefined : EnvironmentCustom<T>
+        >,
+      };
+    };
+  }
+
   private isRequired<O extends boolean>(options?: EnvironmentSchemaTypeOptions<O>): boolean {
-    return options?.optional ?? true;
+    if (options?.optional) {
+      return options.optional === false;
+    }
+
+    return true;
   }
 
   private nonExistingValue(value: string | undefined) {

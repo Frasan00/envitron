@@ -16,54 +16,56 @@ describe('EnvironmentManager (integration)', () => {
   // Initialize schema once for all tests
   const env = createEnvSchema(
     (schema) => ({
-      BOOLEAN: schema.boolean(),
-      EMPTY_BOOLEAN: schema.boolean({ optional: true }),
-      FLOAT: schema.number(),
-      NUMBER: schema.number(),
-      EMPTY_NUMBER: schema.number({ optional: true }),
-      QUOTED_NUMBER: schema.number(),
-      DEFAULT_ENUM: schema.enum(['test', 'test2'] as const),
-      DEFAULT_STRING: schema.string(),
-      DEFAULT_NUM: schema.number(),
-      DEFAULT_BOOLEAN: schema.boolean(),
-      FOO: schema.string(),
+      'BOOLEAN': schema.boolean(),
+      'EMPTY_BOOLEAN': schema.boolean({ optional: true }),
+      'FLOAT': schema.number(),
+      'NUMBER': schema.number(),
+      'EMPTY_NUMBER': schema.number({ optional: true }),
+      'QUOTED_NUMBER': schema.number(),
+      'DEFAULT_ENUM': schema.enum(['test', 'test2'] as const, { optional: true }),
+      'EMPTY_ENUM': schema.enum(['test', 'test2'] as const, { optional: true }),
+      'DEFAULT_STRING': schema.string({ optional: true }),
+      'DEFAULT_NUMBER': schema.number({ optional: true }),
+      'DEFAULT_BOOLEAN': schema.boolean({ optional: true }),
+      'FOO': schema.string(),
       // string edge cases
-      QUOTED1: schema.string(),
-      QUOTED2: schema.string(),
-      QUOTED3: schema.string(),
-      QUOTED4: schema.string(),
-      UNQUOTED_SPACES: schema.string(),
-      EMPTY: schema.string(),
-      ONLY_SPACES: schema.string(),
-      EQUALS: schema.string(),
-      HASH_VALUE: schema.string(),
-      DOT_KEY: schema.string(),
-      DASH_KEY: schema.string(),
-      UNDERSCORE_KEY: schema.string(),
-      KEY123: schema.string(),
-      MULTI_EQUALS: schema.string(),
-      TRAILING: schema.string(),
-      NOVALUE: schema.string({ optional: true }),
-      JUST_QUOTE: schema.string(),
-      JUST_DQUOTE: schema.string(),
-      JUST_HASH: schema.string(),
-      JUST_COMMA: schema.string(),
-      JUST_SPACE: schema.string(),
-      QUOTED_SPACE: schema.string(),
-      QUOTED_HASH: schema.string(),
-      QUOTED_COMMA: schema.string(),
-      QUOTED_EQUALS: schema.string(),
-      QUOTED_NEWLINE: schema.string(),
-      QUOTED_TAB: schema.string(),
-      ESCAPED_NEWLINE: schema.string(),
-      ESCAPED_TAB: schema.string(),
-      ESCAPED_BACKSLASH: schema.string(),
-      CSV: schema.array(),
-      CSV_QUOTED: schema.array(),
-      CSV_SINGLE_QUOTED: schema.array(),
-      ARRAY_DOUBLE_QUOTE: schema.array(),
-      ARRAY_SINGLE_QUOTE: schema.array(),
-      EMPTY_ARRAY: schema.array({ optional: true }),
+      'QUOTED1': schema.string(),
+      'QUOTED2': schema.string(),
+      'QUOTED3': schema.string(),
+      'QUOTED4': schema.string(),
+      'UNQUOTED_SPACES': schema.string(),
+      'EMPTY': schema.string({ optional: true }),
+      'ONLY_SPACES': schema.string({ optional: true }),
+      'EQUALS': schema.string(),
+      'HASH_VALUE': schema.string({ optional: true }),
+      'DOT.KEY': schema.string(),
+      'DASH-KEY': schema.string(),
+      'UNDERSCORE_KEY': schema.string(),
+      'KEY123': schema.string(),
+      'MULTI_EQUALS': schema.string(),
+      'TRAILING': schema.string(),
+      'NOVALUE': schema.string({ optional: true }),
+      'JUST_QUOTE': schema.string({ optional: true }),
+      'JUST_DQUOTE': schema.string({ optional: true }),
+      'JUST_HASH': schema.string({ optional: true }),
+      'JUST_COMMA': schema.string({ optional: true }),
+      'JUST_SPACE': schema.string({ optional: true }),
+      'QUOTED_SPACE': schema.string(),
+      'QUOTED_HASH': schema.string(),
+      'QUOTED_COMMA': schema.string(),
+      'QUOTED_EQUALS': schema.string(),
+      'QUOTED_NEWLINE': schema.string(),
+      'QUOTED_TAB': schema.string(),
+      'ESCAPED_NEWLINE': schema.string(),
+      'ESCAPED_TAB': schema.string(),
+      'ESCAPED_BACKSLASH': schema.string(),
+      'CSV': schema.array(),
+      'CSV_QUOTED': schema.array(),
+      'CSV_SINGLE_QUOTED': schema.array(),
+      'ARRAY_DOUBLE_QUOTE': schema.array(),
+      'ARRAY_SINGLE_QUOTE': schema.array(),
+      'EMPTY_ARRAY': schema.array({ optional: true }),
+      'CUSTOM': schema.custom((value) => Number(value) / 2),
     }),
     {
       envFile: '.env',
@@ -79,8 +81,9 @@ describe('EnvironmentManager (integration)', () => {
     expect(env.get('EMPTY_NUMBER')).toBeUndefined();
     expect(env.get('QUOTED_NUMBER')).toBe(123);
     expect(env.get('DEFAULT_ENUM', 'test2')).toBe('test2');
+    expect(env.get('EMPTY_ENUM')).toBeUndefined();
     expect(env.get('DEFAULT_STRING', 'hello world')).toBe('hello world');
-    expect(env.get('DEFAULT_NUM', 42)).toBe(42);
+    expect(env.get('DEFAULT_NUMBER', 42)).toBe(42);
     expect(env.get('DEFAULT_BOOLEAN', false)).toBe(false);
     expect(env.get('FOO', 'bar')).toBe('bar');
   });
@@ -99,6 +102,7 @@ describe('EnvironmentManager (integration)', () => {
     expect(env.get('QUOTED_TAB')).toBe('\t');
     expect(env.get('UNQUOTED_SPACES')).toBe('some value with spaces');
     expect(env.get('EMPTY')).toBeUndefined();
+    expect(env.get('CUSTOM')).toBe(6);
   });
 
   test('parses arrays and optional array fallback', () => {
@@ -149,5 +153,6 @@ describe('EnvironmentManager (integration)', () => {
     expect(env['DASH-KEY']).toBe('dash');
     expect(env['UNDERSCORE_KEY']).toBe('underscore');
     expect(env.KEY123).toBe('number');
+    expect(env.CUSTOM).toBe(6);
   });
 });

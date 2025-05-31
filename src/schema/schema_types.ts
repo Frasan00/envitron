@@ -1,15 +1,17 @@
 export type EnvironmentString = string;
 export type EnvironmentNumber = number;
 export type EnvironmentBoolean = boolean;
-export type EnvironmentEnum<T extends readonly string[]> = T[number];
+export type EnvironmentEnum<T extends readonly string[]> = T;
 export type EnvironmentArray = string[];
+export type EnvironmentCustom<T> = T;
 
 export type EnvironmentSchemaTypes =
   | EnvironmentString
   | EnvironmentNumber
   | EnvironmentBoolean
   | EnvironmentEnum<any>
-  | EnvironmentArray;
+  | EnvironmentArray
+  | EnvironmentCustom<any>;
 
 export type InferType<T> = T extends EnvironmentString
   ? string
@@ -23,7 +25,9 @@ export type InferType<T> = T extends EnvironmentString
           ? U[number]
           : T extends undefined
             ? undefined
-            : never;
+            : T extends EnvironmentCustom<infer U>
+              ? U
+              : never;
 
 export type InferEnvCallbackType<T extends EnvValidationCallback<EnvironmentSchemaTypes>> =
   T extends EnvValidationCallback<infer U> ? InferType<U> : never;

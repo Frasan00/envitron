@@ -13,6 +13,7 @@ import type {
   EnvironmentSchemaTypes,
   EnvValidationCallback,
   InferEnvCallbackType,
+  InferType,
 } from './schema/schema_types';
 
 export default class EnvironmentManager<
@@ -106,7 +107,9 @@ export default class EnvironmentManager<
 
     return Object.keys(envManagerInstance.envs).reduce(
       (acc, key) => {
-        acc[key as keyof T] = envManagerInstance.get(key) as InferEnvCallbackType<T[keyof T]>;
+        acc[key as keyof T] = envManagerInstance.get(key) as InferEnvCallbackType<
+          T[keyof T]
+        > as InferType<T[keyof T]>;
         return acc;
       },
       envManagerInstance as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }
@@ -187,10 +190,6 @@ export default class EnvironmentManager<
 
   private validateEnvs(): void {
     for (const schemaKey in this.schemaDefinition) {
-      if (!this.envs[schemaKey]) {
-        continue;
-      }
-
       const envValue = this.envs[schemaKey] as string;
       const envParser = this.schemaDefinition[schemaKey];
       const res = envParser(envValue);
