@@ -73,6 +73,8 @@ describe('EnvironmentManager (integration)', () => {
     }
   );
 
+  const a = env.get('EMPTY', 'test');
+
   test('parses basic types and defaults', () => {
     expect(env.get('BOOLEAN')).toBe(true);
     expect(env.get('EMPTY_BOOLEAN')).toBeUndefined();

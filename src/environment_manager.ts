@@ -122,10 +122,10 @@ export default class EnvironmentManager<
    * @warning - If the value is not found and no default value is provided, it will return empty string to mimic the behavior of process.env since provided envs are always present even if they are not set
    */
   get<K extends keyof T>(key: K): InferEnvCallbackType<T[K]>;
-  get<K extends keyof T>(
+  get<K extends keyof T, D extends InferEnvCallbackType<T[K]>>(
     key: K,
-    defaultValue: InferEnvCallbackType<T[K]>
-  ): InferEnvCallbackType<T[K]>;
+    defaultValue: D
+  ): NonNullable<InferEnvCallbackType<T[K]>>;
   get(key: string): string | undefined;
   get(key: string, defaultValue: string): string;
   get<K extends keyof T>(key: K | string, defaultValue?: any): any {
