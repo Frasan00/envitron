@@ -157,7 +157,7 @@ export default class EnvironmentManager<
     );
   }
 
-  protected collectEnvs(): EnvParsedFileType {
+  collectEnvs(): EnvParsedFileType {
     if (typeof this.envFile === 'string') {
       const envPath = path.join(this.rootPath, this.envFile);
       if (!fs.existsSync(envPath)) {
