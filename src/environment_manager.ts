@@ -6,7 +6,7 @@ import type {
   EnvParsedFileType,
   SchemaBuilderType,
 } from './environment_manager_types';
-import { MissingRequiredEnvError, WrongTypeError } from './envitron_error';
+import { validateEnvs } from './evitron';
 import logger, { log } from './logger';
 import { Schema } from './schema/schema';
 import type {
@@ -19,14 +19,14 @@ import type {
 export default class EnvironmentManager<
   T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
 > {
-  private schemaDefinition: T;
+  public schemaDefinition: T;
   private rootPath: string;
-  private envs: EnvParsedFileType;
-  private logs: boolean;
-  private throwErrorOnValidationFail: boolean;
+  public envs: EnvParsedFileType;
+  public logs: boolean;
+  public throwErrorOnValidationFail: boolean;
   private envFile: string | string[];
 
-  private constructor(
+  public constructor(
     schemaBuilder: (schema: Schema) => T,
     options?: {
       logs?: boolean;
@@ -88,7 +88,7 @@ export default class EnvironmentManager<
 
     envManagerInstance.envs = envManagerInstance.collectEnvs();
     try {
-      envManagerInstance.validateEnvs();
+      validateEnvs(envManagerInstance);
     } catch (error: any) {
       if (envManagerInstance.throwErrorOnValidationFail) {
         throw error;
@@ -99,10 +99,14 @@ export default class EnvironmentManager<
       }
     }
 
-    if (options?.loadFromProcessEnv) {
-      Object.entries(envManagerInstance.envs).forEach(([key, value]) => {
-        envManagerInstance.envs[key] = value;
-      });
+    if (options?.loadFromProcessEnv ?? true) {
+      envManagerInstance.envs = {
+        ...envManagerInstance.envs,
+        ...Object.entries(process.env).reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as EnvParsedFileType),
+      };
     }
 
     return Object.keys(envManagerInstance.envs).reduce(
@@ -188,39 +192,6 @@ export default class EnvironmentManager<
     return {};
   }
 
-  private validateEnvs(): void {
-    for (const schemaKey in this.schemaDefinition) {
-      const envValue = this.envs[schemaKey] as string;
-      const envParser = this.schemaDefinition[schemaKey];
-      const res = envParser(envValue);
-      if (!this.throwErrorOnValidationFail) {
-        if (res.error?.type === 'required_and_missing') {
-          log(new MissingRequiredEnvError(schemaKey).message, this.logs);
-        }
-
-        if (res.error?.type === 'wrong_type') {
-          log(
-            new WrongTypeError(schemaKey, envValue, res.error.expectedType, res.error.foundType!)
-              .message,
-            this.logs
-          );
-        }
-
-        continue;
-      }
-
-      if (res.error?.type === 'required_and_missing') {
-        throw new MissingRequiredEnvError(schemaKey);
-      }
-
-      if (res.error?.type === 'wrong_type') {
-        throw new WrongTypeError(schemaKey, envValue, res.error.expectedType, res.error.foundType!);
-      }
-
-      this.envs[schemaKey] = res.value as string;
-    }
-  }
-
   /**
    * @description - This function is used to parse the environment file, it will return an object with the environment variables
    */
@@ -281,10 +252,14 @@ export default class EnvironmentManager<
       envFile: options?.envFile || '.env',
     });
 
-    if (options?.loadFromProcessEnv) {
-      Object.entries(process.env).forEach(([key, value]) => {
-        envManagerInstance.envs[key] = value;
-      });
+    if (options?.loadFromProcessEnv ?? true) {
+      envManagerInstance.envs = {
+        ...envManagerInstance.envs,
+        ...Object.entries(process.env).reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as EnvParsedFileType),
+      };
     }
 
     return envManagerInstance as EnvironmentManager<T>;
