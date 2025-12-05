@@ -19,14 +19,14 @@ import type {
 export default class EnvironmentManager<
   T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
 > {
-  public schemaDefinition: T;
-  private rootPath: string;
-  public envs: EnvParsedFileType;
-  public logs: boolean;
-  public throwErrorOnValidationFail: boolean;
-  private envFile: string | string[];
+  readonly schemaDefinition: T;
+  readonly rootPath: string;
+  readonly logs: boolean;
+  readonly throwErrorOnValidationFail: boolean;
+  readonly envFile: string | string[];
+  envs: EnvParsedFileType;
 
-  public constructor(
+  constructor(
     schemaBuilder: (schema: Schema) => T,
     options?: {
       logs?: boolean;
@@ -41,83 +41,6 @@ export default class EnvironmentManager<
     this.envFile = options?.envFile || ['.env'];
     this.envs = this.collectEnvs();
     this.schemaDefinition = schemaBuilder(new Schema());
-  }
-
-  /**
-   * @description - This function is used to create the schema for the environment variables
-   * @description - Automatically loads the environment variables and parses them using the schema
-   * @param cb - A callback function that returns the schema for the environment variables
-   * @param options - An object that contains the options for the environment manager
-   */
-  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
-    options?: CreateEnvSchemaOptions
-  ): AugmentedEnvironmentManager<T>;
-  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
-    schemaBuilder: SchemaBuilderType<T>,
-    options?: CreateEnvSchemaOptions
-  ): AugmentedEnvironmentManager<T>;
-  static createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>>(
-    schemaBuilderOrOptions?: SchemaBuilderType<T> | CreateEnvSchemaOptions,
-    options?: CreateEnvSchemaOptions
-  ): AugmentedEnvironmentManager<T> {
-    if (!(typeof schemaBuilderOrOptions === 'function')) {
-      options = schemaBuilderOrOptions;
-    }
-
-    const envFile = options?.envFile || '.env';
-    const logs = options?.logs ?? true;
-    const throwErrorOnValidationFail = options?.throwErrorOnValidationFail ?? true;
-    const rootPath = path.resolve(process.cwd(), options?.rootPath || '');
-    if (!(typeof schemaBuilderOrOptions === 'function')) {
-      return EnvironmentManager.getStandaloneInstance<T>({
-        ...schemaBuilderOrOptions,
-        envFile,
-        logs,
-        throwErrorOnValidationFail,
-        rootPath,
-      }) as AugmentedEnvironmentManager<T>;
-    }
-
-    const envManagerInstance = new EnvironmentManager(schemaBuilderOrOptions, {
-      ...options,
-      logs,
-      rootPath,
-      throwErrorOnValidationFail,
-      envFile,
-    });
-
-    envManagerInstance.envs = envManagerInstance.collectEnvs();
-    try {
-      validateEnvs(envManagerInstance);
-    } catch (error: any) {
-      if (envManagerInstance.throwErrorOnValidationFail) {
-        throw error;
-      }
-
-      if (envManagerInstance.logs) {
-        logger.logError(error);
-      }
-    }
-
-    if (options?.loadFromProcessEnv ?? true) {
-      envManagerInstance.envs = {
-        ...envManagerInstance.envs,
-        ...Object.entries(process.env).reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {} as EnvParsedFileType),
-      };
-    }
-
-    return Object.keys(envManagerInstance.envs).reduce(
-      (acc, key) => {
-        acc[key as keyof T] = envManagerInstance.get(key) as InferEnvCallbackType<
-          T[keyof T]
-        > as InferType<T[keyof T]>;
-        return acc;
-      },
-      envManagerInstance as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }
-    ) as AugmentedEnvironmentManager<T>;
   }
 
   /**
@@ -239,29 +162,5 @@ export default class EnvironmentManager<
     }
 
     return envsObject;
-  }
-
-  /**
-   * @description - Used for schema-less environment variable retrieval
-   */
-  private static getStandaloneInstance<T extends Record<string, EnvironmentSchemaTypes>>(
-    options?: CreateEnvSchemaOptions
-  ): EnvironmentManager<T> {
-    const envManagerInstance = new EnvironmentManager(() => ({}), {
-      ...options,
-      envFile: options?.envFile || '.env',
-    });
-
-    if (options?.loadFromProcessEnv ?? true) {
-      envManagerInstance.envs = {
-        ...envManagerInstance.envs,
-        ...Object.entries(process.env).reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {} as EnvParsedFileType),
-      };
-    }
-
-    return envManagerInstance as EnvironmentManager<T>;
   }
 }
