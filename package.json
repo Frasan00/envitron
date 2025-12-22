@@ -1,10 +1,19 @@
 {
   "name": "envitron",
-  "version": "2.3.7",
-  "main": "./lib/index.js",
+  "version": "2.3.8",
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "repository": "https://github.com/Frasan00/environment-manager.git",
   "author": "Frasan00 <francesco.sangiovanni.7@gmail.com>",
   "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./lib/index.cjs"
+    }
+  },
   "scripts": {
     "watch": "tsc --watch",
     "start": "yarn format && rm -rf ./lib && yarn build && touch ./lib/.env && cp ./.env.example ./lib/.env && node lib/index.js",

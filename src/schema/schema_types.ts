@@ -5,6 +5,25 @@ export type EnvironmentEnum<T extends readonly string[]> = T;
 export type EnvironmentArray = string[];
 export type EnvironmentCustom<T> = T;
 
+export type StringOptions =
+  | {
+      format?: 'email' | 'url' | 'ip' | 'uuid' | 'host';
+      minLength?: number;
+      maxLength?: number;
+    }
+  | {
+      format?: 'regex';
+      regex: RegExp;
+      minLength?: number;
+      maxLength?: number;
+    };
+
+export type NumberOptions = {
+  min?: number;
+  max?: number;
+  positive?: boolean;
+};
+
 export type EnvironmentSchemaTypes =
   | EnvironmentString
   | EnvironmentNumber
@@ -33,7 +52,7 @@ export type InferEnvCallbackType<T extends EnvValidationCallback<EnvironmentSche
   T extends EnvValidationCallback<infer U> ? InferType<U> : never;
 
 export type OptionalOption<O extends boolean> = {
-  optional: O;
+  optional?: O;
 };
 
 export type EnvironmentSchemaTypeOptions<O extends boolean> = OptionalOption<O>;

@@ -1,5 +1,6 @@
 test/
 src/
+.github/
 .gitignore
 tsconfig.json
 yarn.lock
@@ -7,7 +8,6 @@ jest.config.js
 .nvmrc
 logfile.log
 tsup.config.ts
-.github/
 .env.example
 tsup.config.ts
 vitest.config.ts
@@ -16,3 +16,4 @@ vitest.config.ts
 docs-site
 vitest.conf.ts
 .husky/
+node_modules/

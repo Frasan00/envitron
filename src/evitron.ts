@@ -46,6 +46,8 @@ export function validateEnvs<
     if (!envManagerInstance.throwErrorOnValidationFail) {
       if (res.error?.type === 'required_and_missing') {
         log(new MissingRequiredEnvError(schemaKey).message, envManagerInstance.logs);
+        envManagerInstance.envs[schemaKey] = res.value as string;
+        continue;
       }
 
       if (res.error?.type === 'wrong_type') {
@@ -54,8 +56,11 @@ export function validateEnvs<
             .message,
           envManagerInstance.logs
         );
+        envManagerInstance.envs[schemaKey] = res.value as string;
+        continue;
       }
 
+      envManagerInstance.envs[schemaKey] = res.value as string;
       continue;
     }
 
