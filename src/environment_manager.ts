@@ -134,6 +134,10 @@ export default class EnvironmentManager<
         throw jsonError;
       }
 
+      if (envPath.endsWith('.json')) {
+        throw new Error(`[Envitron] Failed to parse JSON file "${envPath}": ${jsonError.message}`);
+      }
+
       return parseEnvFileTraditional(envFile);
     }
   }

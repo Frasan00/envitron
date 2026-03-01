@@ -23,7 +23,7 @@ function getStandaloneInstance<T extends Record<string, EnvironmentSchemaTypes>>
     envFile: options?.envFile || '.env',
   });
 
-  if (options?.loadFromProcessEnv ?? true) {
+  if (options?.loadFromProcessEnv ?? false) {
     envManagerInstance.envs = {
       ...envManagerInstance.envs,
       ...Object.entries(process.env).reduce((acc, [key, value]) => {
@@ -126,7 +126,7 @@ export function createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>
     }
   }
 
-  if (options?.loadFromProcessEnv ?? true) {
+  if (options?.loadFromProcessEnv ?? false) {
     envManagerInstance.envs = {
       ...envManagerInstance.envs,
       ...Object.entries(process.env).reduce((acc, [key, value]) => {

@@ -1070,19 +1070,55 @@ describe('JSON environment files', () => {
     expect(env.get('ONLY_JSON')).toBe('json_value');
   });
 
-  test('malformed JSON falls back to .env parsing', () => {
+  test('malformed JSON throws for .json files', () => {
     fs.writeFileSync('.env.json', 'NOT_JSON=this_is_env_format\nANOTHER=value');
 
-    const env = createEnvSchema(
-      (schema) => ({
-        NOT_JSON: schema.string(),
-        ANOTHER: schema.string(),
-      }),
-      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    expect(() => {
+      createEnvSchema(
+        (schema) => ({
+          NOT_JSON: schema.string(),
+          ANOTHER: schema.string(),
+        }),
+        { envFile: '.env.json', throwErrorOnValidationFail: false }
+      );
+    }).toThrow('[Envitron] Failed to parse JSON file');
+  });
+
+  test('invalid JSON with trailing comma throws a descriptive error', () => {
+    fs.writeFileSync(
+      '.env.json',
+      `{
+  "port": 80,
+  "host": "0.0.0.0",
+  "logs": true,
+  "aws": {
+    "accessKeyId": "test",
+    "secretAccessKey": "test",
+    "region": "test",
+  },
+  "allowedDomains": ["test1", "test2"]
+}`
     );
 
-    expect(env.get('NOT_JSON')).toBe('this_is_env_format');
-    expect(env.get('ANOTHER')).toBe('value');
+    expect(() => {
+      createEnvSchema(
+        (schema) => ({
+          port: schema.number({ optional: true }),
+          host: schema.string({ optional: true }),
+          logs: schema.boolean({ optional: true }),
+          aws: schema.object(
+            {
+              accessKeyId: schema.string(),
+              secretAccessKey: schema.string(),
+              region: schema.string(),
+            },
+            { optional: true }
+          ),
+          allowedDomains: schema.array(schema.string(), { optional: true }),
+        }),
+        { envFile: '.env.json', loadFromProcessEnv: false }
+      );
+    }).toThrow('[Envitron] Failed to parse JSON file');
   });
 
   test('empty JSON object', () => {
