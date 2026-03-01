@@ -134,53 +134,50 @@ export default class EnvironmentManager<
         throw jsonError;
       }
 
-      return this.parseEnvFileTraditional(envFile);
+      return parseEnvFileTraditional(envFile);
     }
   }
+}
 
-  /**
-   * @description - This function parses traditional .env files with key=value format
-   */
-  private parseEnvFileTraditional(envFile: string): EnvParsedFileType {
-    const envsObject: EnvParsedFileType = {};
+function parseEnvFileTraditional(envFile: string): EnvParsedFileType {
+  const envsObject: EnvParsedFileType = {};
 
-    const regex =
-      /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/gm;
+  const regex =
+    /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/gm;
 
-    let match: RegExpExecArray | null;
+  let match: RegExpExecArray | null;
 
-    while ((match = regex.exec(envFile)) !== null) {
-      const key = match[1];
-      let value = match[2]?.trim() || '';
+  while ((match = regex.exec(envFile)) !== null) {
+    const key = match[1];
+    let value = match[2]?.trim() || '';
 
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'")) ||
-        (value.startsWith('`') && value.endsWith('`'))
-      ) {
-        const quoteType = value[0];
-        value = value.slice(1, -1);
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'")) ||
+      (value.startsWith('`') && value.endsWith('`'))
+    ) {
+      const quoteType = value[0];
+      value = value.slice(1, -1);
 
-        if (quoteType === '"') {
-          value = value
-            .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '\r')
-            .replace(/\\t/g, '\t')
-            .replace(/\\"/g, '"')
-            .replace(/\\\\/g, '\\');
-        }
-      }
-
-      if (value.includes(',')) {
-        envsObject[key] = value
-          .split(',')
-          .map((v) => v.trim())
-          .join(',');
-      } else {
-        envsObject[key] = value;
+      if (quoteType === '"') {
+        value = value
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
       }
     }
 
-    return envsObject;
+    if (value.includes(',')) {
+      envsObject[key] = value
+        .split(',')
+        .map((v) => v.trim())
+        .join(',');
+    } else {
+      envsObject[key] = value;
+    }
   }
+
+  return envsObject;
 }
