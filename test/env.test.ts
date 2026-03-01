@@ -794,3 +794,954 @@ describe('String validation edge cases', () => {
     expect(env.get('SPECIAL_WITH_HASH')).toBe('#special');
   });
 });
+
+describe('JSON environment files', () => {
+  beforeEach(() => {
+    if (fs.existsSync('.env.json')) fs.unlinkSync('.env.json');
+  });
+
+  afterAll(() => {
+    if (fs.existsSync('.env.json')) fs.unlinkSync('.env.json');
+  });
+
+  test('parses valid flat JSON with native types', () => {
+    const jsonContent = {
+      PORT: 3000,
+      DEBUG: true,
+      API_KEY: 'secret123',
+      HOST: 'localhost',
+      ENABLED: false,
+      TIMEOUT: 5000,
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        PORT: schema.number(),
+        DEBUG: schema.boolean(),
+        API_KEY: schema.string(),
+        HOST: schema.string(),
+        ENABLED: schema.boolean(),
+        TIMEOUT: schema.number(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('PORT')).toBe(3000);
+    expect(env.get('DEBUG')).toBe(true);
+    expect(env.get('API_KEY')).toBe('secret123');
+    expect(env.get('HOST')).toBe('localhost');
+    expect(env.get('ENABLED')).toBe(false);
+    expect(env.get('TIMEOUT')).toBe(5000);
+  });
+
+  test('handles type mismatch when nested object passed to non-object schema', () => {
+    const jsonContent = {
+      DATABASE: {
+        HOST: 'localhost',
+        PORT: 5432,
+      },
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        DATABASE: schema.string(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('DATABASE')).toBeUndefined();
+  });
+
+  test('rejects JSON arrays', () => {
+    const jsonContent = ['value1', 'value2', 'value3'];
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    expect(() => {
+      createEnvSchema(
+        (schema) => ({
+          VALUE: schema.string(),
+        }),
+        { envFile: '.env.json', throwErrorOnValidationFail: true }
+      );
+    }).toThrow('[Envitron] JSON must be an object');
+  });
+
+  test('rejects JSON primitives', () => {
+    fs.writeFileSync('.env.json', '"just a string"');
+
+    expect(() => {
+      createEnvSchema(
+        (schema) => ({
+          VALUE: schema.string(),
+        }),
+        { envFile: '.env.json', throwErrorOnValidationFail: true }
+      );
+    }).toThrow('[Envitron] JSON must be an object');
+  });
+
+  test('handles JSON with undefined and null values', () => {
+    const jsonContent = {
+      DEFINED: 'value',
+      NULLABLE: null,
+      OPTIONAL_STRING: 'test',
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        DEFINED: schema.string(),
+        NULLABLE: schema.string({ optional: true }),
+        OPTIONAL_STRING: schema.string({ optional: true }),
+        MISSING: schema.string({ optional: true }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('DEFINED')).toBe('value');
+    expect(env.get('NULLABLE')).toBeUndefined();
+    expect(env.get('OPTIONAL_STRING')).toBe('test');
+    expect(env.get('MISSING')).toBeUndefined();
+  });
+
+  test('validates JSON numbers with constraints', () => {
+    const jsonContent = {
+      VALID_PORT: 8080,
+      INVALID_PORT: 99999,
+      POSITIVE_NUM: 42,
+      NEGATIVE_NUM: -10,
+      FLOAT_NUM: 3.14,
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        VALID_PORT: schema.number({ min: 1024, max: 65535 }),
+        INVALID_PORT: schema.number({ min: 1024, max: 65535 }),
+        POSITIVE_NUM: schema.number({ positive: true }),
+        NEGATIVE_NUM: schema.number({ positive: true }),
+        FLOAT_NUM: schema.number({ min: 3.0, max: 4.0 }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('VALID_PORT')).toBe(8080);
+    expect(env.get('INVALID_PORT')).toBeUndefined();
+    expect(env.get('POSITIVE_NUM')).toBe(42);
+    expect(env.get('NEGATIVE_NUM')).toBeUndefined();
+    expect(env.get('FLOAT_NUM')).toBe(3.14);
+  });
+
+  test('validates JSON strings with format constraints', () => {
+    const jsonContent = {
+      EMAIL: 'test@example.com',
+      INVALID_EMAIL: 'notanemail',
+      URL: 'https://example.com',
+      UUID: '550e8400-e29b-41d4-a716-446655440000',
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        EMAIL: schema.string({ format: 'email' }),
+        INVALID_EMAIL: schema.string({ format: 'email' }),
+        URL: schema.string({ format: 'url' }),
+        UUID: schema.string({ format: 'uuid' }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('EMAIL')).toBe('test@example.com');
+    expect(env.get('INVALID_EMAIL')).toBeUndefined();
+    expect(env.get('URL')).toBe('https://example.com');
+    expect(env.get('UUID')).toBe('550e8400-e29b-41d4-a716-446655440000');
+  });
+
+  test('handles JSON arrays stored as comma-separated strings', () => {
+    const jsonContent = {
+      CSV_STRING: 'foo,bar,baz',
+      EMPTY_CSV: '',
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        CSV_STRING: schema.array(),
+        EMPTY_CSV: schema.array({ optional: true }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('CSV_STRING')).toEqual(['foo', 'bar', 'baz']);
+    expect(env.get('EMPTY_CSV')).toBeUndefined();
+  });
+
+  test('validates JSON enums', () => {
+    const jsonContent = {
+      VALID_ENV: 'production',
+      INVALID_ENV: 'invalid',
+      OPTIONAL_ENV: 'development',
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        VALID_ENV: schema.enum(['development', 'production', 'test'] as const),
+        INVALID_ENV: schema.enum(['development', 'production', 'test'] as const),
+        OPTIONAL_ENV: schema.enum(['development', 'production', 'test'] as const, {
+          optional: true,
+        }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('VALID_ENV')).toBe('production');
+    expect(env.get('INVALID_ENV')).toBe('invalid');
+    expect(env.get('OPTIONAL_ENV')).toBe('development');
+  });
+
+  test('custom validators with JSON native types', () => {
+    const jsonContent = {
+      DOUBLE_ME: 50,
+      MULTIPLY: 10,
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        DOUBLE_ME: schema.custom((value) => Number(value) * 2),
+        MULTIPLY: schema.custom((value) => Number(value) * 3),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('DOUBLE_ME')).toBe(100);
+    expect(env.get('MULTIPLY')).toBe(30);
+  });
+
+  test('mixed file types - .env and .json', () => {
+    fs.writeFileSync('.env', 'STRING_VAR=from_env\nNUMBER_VAR=999');
+    fs.writeFileSync('.env.json', JSON.stringify({ JSON_VAR: 'from_json', JSON_NUM: 123 }));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        STRING_VAR: schema.string(),
+        NUMBER_VAR: schema.number(),
+        JSON_VAR: schema.string(),
+        JSON_NUM: schema.number(),
+      }),
+      { envFile: ['.env', '.env.json'], throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('STRING_VAR')).toBe('from_env');
+    expect(env.get('NUMBER_VAR')).toBe(999);
+    expect(env.get('JSON_VAR')).toBe('from_json');
+    expect(env.get('JSON_NUM')).toBe(123);
+  });
+
+  test('JSON overrides .env when both define same key', () => {
+    fs.writeFileSync('.env', 'SHARED_KEY=from_env\nONLY_ENV=env_value');
+    fs.writeFileSync(
+      '.env.json',
+      JSON.stringify({ SHARED_KEY: 'from_json', ONLY_JSON: 'json_value' })
+    );
+
+    const env = createEnvSchema(
+      (schema) => ({
+        SHARED_KEY: schema.string(),
+        ONLY_ENV: schema.string(),
+        ONLY_JSON: schema.string(),
+      }),
+      { envFile: ['.env', '.env.json'], throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('SHARED_KEY')).toBe('from_json');
+    expect(env.get('ONLY_ENV')).toBe('env_value');
+    expect(env.get('ONLY_JSON')).toBe('json_value');
+  });
+
+  test('malformed JSON falls back to .env parsing', () => {
+    fs.writeFileSync('.env.json', 'NOT_JSON=this_is_env_format\nANOTHER=value');
+
+    const env = createEnvSchema(
+      (schema) => ({
+        NOT_JSON: schema.string(),
+        ANOTHER: schema.string(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('NOT_JSON')).toBe('this_is_env_format');
+    expect(env.get('ANOTHER')).toBe('value');
+  });
+
+  test('empty JSON object', () => {
+    fs.writeFileSync('.env.json', '{}');
+
+    const env = createEnvSchema(
+      (schema) => ({
+        OPTIONAL_VAR: schema.string({ optional: true }),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('OPTIONAL_VAR')).toBeUndefined();
+  });
+
+  test('JSON with whitespace and formatting', () => {
+    const jsonContent = `
+    {
+      "KEY1": "value1",
+      "KEY2": 42,
+      "KEY3": true
+    }
+    `;
+
+    fs.writeFileSync('.env.json', jsonContent);
+
+    const env = createEnvSchema(
+      (schema) => ({
+        KEY1: schema.string(),
+        KEY2: schema.number(),
+        KEY3: schema.boolean(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('KEY1')).toBe('value1');
+    expect(env.get('KEY2')).toBe(42);
+    expect(env.get('KEY3')).toBe(true);
+  });
+
+  test('JSON with empty strings and zero values', () => {
+    const jsonContent = {
+      EMPTY_STRING: '',
+      ZERO: 0,
+      FALSE_BOOL: false,
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        EMPTY_STRING: schema.string({ optional: true }),
+        ZERO: schema.number({ min: 0 }),
+        FALSE_BOOL: schema.boolean(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('EMPTY_STRING')).toBeUndefined();
+    expect(env.get('ZERO')).toBe(0);
+    expect(env.get('FALSE_BOOL')).toBe(false);
+  });
+
+  test('JSON with special characters in string values', () => {
+    const jsonContent = {
+      WITH_QUOTES: 'He said "hello"',
+      WITH_NEWLINE: 'line1\nline2',
+      WITH_BACKSLASH: 'path\\to\\file',
+      WITH_UNICODE: '🚀 emoji test',
+    };
+
+    fs.writeFileSync('.env.json', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        WITH_QUOTES: schema.string(),
+        WITH_NEWLINE: schema.string(),
+        WITH_BACKSLASH: schema.string(),
+        WITH_UNICODE: schema.string(),
+      }),
+      { envFile: '.env.json', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('WITH_QUOTES')).toBe('He said "hello"');
+    expect(env.get('WITH_NEWLINE')).toBe('line1\nline2');
+    expect(env.get('WITH_BACKSLASH')).toBe('path\\to\\file');
+    expect(env.get('WITH_UNICODE')).toBe('🚀 emoji test');
+  });
+});
+
+describe('Nested JSON objects', () => {
+  beforeEach(() => {
+    if (fs.existsSync('.env.nested')) fs.unlinkSync('.env.nested');
+  });
+
+  afterAll(() => {
+    if (fs.existsSync('.env.nested')) fs.unlinkSync('.env.nested');
+  });
+
+  test('validates basic nested objects', () => {
+    const jsonContent = {
+      database: {
+        host: 'localhost',
+        port: 5432,
+        ssl: true,
+      },
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        database: schema.object({
+          host: schema.string(),
+          port: schema.number(),
+          ssl: schema.boolean(),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    const db = env.get('database');
+    expect(db).toBeDefined();
+    expect(db.host).toBe('localhost');
+    expect(db.port).toBe(5432);
+    expect(db.ssl).toBe(true);
+  });
+
+  test('validates deeply nested objects', () => {
+    const jsonContent = {
+      app: {
+        server: {
+          config: {
+            timeout: 30,
+            retries: 3,
+          },
+          port: 8080,
+        },
+        name: 'api',
+      },
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        app: schema.object({
+          server: schema.object({
+            config: schema.object({
+              timeout: schema.number(),
+              retries: schema.number(),
+            }),
+            port: schema.number(),
+          }),
+          name: schema.string(),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    const app = env.get('app');
+    expect(app).toBeDefined();
+    expect(app.server.config.timeout).toBe(30);
+    expect(app.server.config.retries).toBe(3);
+    expect(app.server.port).toBe(8080);
+    expect(app.name).toBe('api');
+  });
+
+  test('validates optional nested objects', () => {
+    const jsonContent = {
+      required: {
+        value: 'test',
+      },
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        required: schema.object({
+          value: schema.string(),
+        }),
+        optional: schema.object(
+          {
+            value: schema.string(),
+          },
+          { optional: true }
+        ),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('required')).toEqual({ value: 'test' });
+    expect(env.get('optional')).toBeUndefined();
+  });
+
+  test('validates nested objects with mixed types', () => {
+    const jsonContent = {
+      service: {
+        name: 'api',
+        port: 3000,
+        enabled: true,
+        timeout: 30.5,
+        tags: 'prod,api',
+      },
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        service: schema.object({
+          name: schema.string(),
+          port: schema.number({ min: 1024, max: 65535 }),
+          enabled: schema.boolean(),
+          timeout: schema.number(),
+          tags: schema.array(),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    const service = env.get('service');
+    expect(service.name).toBe('api');
+    expect(service.port).toBe(3000);
+    expect(service.enabled).toBe(true);
+    expect(service.timeout).toBe(30.5);
+    expect(service.tags).toEqual(['prod', 'api']);
+  });
+
+  test('handles nested object validation failures', () => {
+    const jsonContent = {
+      config: {
+        port: 99999,
+        name: 'te',
+      },
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        config: schema.object({
+          port: schema.number({ min: 1024, max: 65535 }),
+          name: schema.string({ minLength: 3 }),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    const config = env.get('config');
+    expect(config.port).toBeUndefined();
+    expect(config.name).toBeUndefined();
+  });
+
+  test('rejects non-object values for object schema', () => {
+    const jsonContent = {
+      database: 'not an object',
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        database: schema.object({
+          host: schema.string(),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('database')).toBeUndefined();
+  });
+
+  test('rejects arrays for object schema', () => {
+    const jsonContent = {
+      database: ['item1', 'item2'],
+    };
+
+    fs.writeFileSync('.env.nested', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        database: schema.object({
+          host: schema.string(),
+        }),
+      }),
+      { envFile: '.env.nested', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('database')).toBeUndefined();
+  });
+});
+
+describe('Typed arrays', () => {
+  beforeEach(() => {
+    if (fs.existsSync('.env.array')) fs.unlinkSync('.env.array');
+  });
+
+  afterAll(() => {
+    if (fs.existsSync('.env.array')) fs.unlinkSync('.env.array');
+  });
+
+  test('validates arrays of numbers', () => {
+    const jsonContent = {
+      ports: [8080, 8081, 8082],
+      scores: [10, 20, 30, 40],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        ports: schema.array(schema.number()),
+        scores: schema.array(schema.number()),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('ports')).toEqual([8080, 8081, 8082]);
+    expect(env.get('scores')).toEqual([10, 20, 30, 40]);
+  });
+
+  test('validates arrays of strings', () => {
+    const jsonContent = {
+      tags: ['prod', 'api', 'v1'],
+      names: ['alice', 'bob', 'charlie'],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        tags: schema.array(schema.string()),
+        names: schema.array(schema.string()),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('tags')).toEqual(['prod', 'api', 'v1']);
+    expect(env.get('names')).toEqual(['alice', 'bob', 'charlie']);
+  });
+
+  test('validates arrays of booleans', () => {
+    const jsonContent = {
+      flags: [true, false, true, true],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        flags: schema.array(schema.boolean()),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('flags')).toEqual([true, false, true, true]);
+  });
+
+  test('validates typed arrays with constraints', () => {
+    const jsonContent = {
+      validPorts: [1024, 8080, 3000],
+      invalidPorts: [80, 100000, 3000],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        validPorts: schema.array(schema.number({ min: 1024, max: 65535 })),
+        invalidPorts: schema.array(schema.number({ min: 1024, max: 65535 })),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('validPorts')).toEqual([1024, 8080, 3000]);
+    expect(env.get('invalidPorts')).toEqual([undefined, undefined, 3000]);
+  });
+
+  test('validates optional typed arrays', () => {
+    const jsonContent = {
+      present: [1, 2, 3],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        present: schema.array(schema.number(), { optional: true }),
+        missing: schema.array(schema.number(), { optional: true }),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('present')).toEqual([1, 2, 3]);
+    expect(env.get('missing')).toBeUndefined();
+  });
+
+  test('validates empty typed arrays', () => {
+    const jsonContent = {
+      emptyNumbers: [],
+      emptyStrings: [],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        emptyNumbers: schema.array(schema.number()),
+        emptyStrings: schema.array(schema.string()),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('emptyNumbers')).toEqual([]);
+    expect(env.get('emptyStrings')).toEqual([]);
+  });
+
+  test('typed arrays work with comma-separated strings from .env', () => {
+    fs.writeFileSync('.env.array', 'PORTS=8080,8081,8082\nTAGS=prod,api,v1');
+
+    const env = createEnvSchema(
+      (schema) => ({
+        PORTS: schema.array(schema.number()),
+        TAGS: schema.array(schema.string()),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('PORTS')).toEqual([8080, 8081, 8082]);
+    expect(env.get('TAGS')).toEqual(['prod', 'api', 'v1']);
+  });
+
+  test('backward compatibility - untyped arrays still work', () => {
+    const jsonContent = {
+      tags: ['a', 'b', 'c'],
+    };
+
+    fs.writeFileSync('.env.array', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        tags: schema.array(),
+      }),
+      { envFile: '.env.array', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('Complex nested structures', () => {
+  beforeEach(() => {
+    if (fs.existsSync('.env.complex')) fs.unlinkSync('.env.complex');
+  });
+
+  afterAll(() => {
+    if (fs.existsSync('.env.complex')) fs.unlinkSync('.env.complex');
+  });
+
+  test('validates nested objects with arrays', () => {
+    const jsonContent = {
+      services: {
+        api: {
+          endpoints: ['users', 'posts', 'comments'],
+          port: 3000,
+          enabled: true,
+        },
+        worker: {
+          endpoints: ['jobs', 'tasks'],
+          port: 3001,
+          enabled: false,
+        },
+      },
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        services: schema.object({
+          api: schema.object({
+            endpoints: schema.array(schema.string()),
+            port: schema.number(),
+            enabled: schema.boolean(),
+          }),
+          worker: schema.object({
+            endpoints: schema.array(schema.string()),
+            port: schema.number(),
+            enabled: schema.boolean(),
+          }),
+        }),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    const services = env.get('services');
+    expect(services.api.endpoints).toEqual(['users', 'posts', 'comments']);
+    expect(services.api.port).toBe(3000);
+    expect(services.api.enabled).toBe(true);
+    expect(services.worker.endpoints).toEqual(['jobs', 'tasks']);
+    expect(services.worker.port).toBe(3001);
+    expect(services.worker.enabled).toBe(false);
+  });
+
+  test('validates arrays of numbers with nested objects', () => {
+    const jsonContent = {
+      config: {
+        allowedPorts: [8080, 8081, 8082],
+        blockedPorts: [80, 443],
+      },
+      metadata: {
+        version: '1.0.0',
+      },
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        config: schema.object({
+          allowedPorts: schema.array(schema.number({ min: 1024 })),
+          blockedPorts: schema.array(schema.number()),
+        }),
+        metadata: schema.object({
+          version: schema.string(),
+        }),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    const config = env.get('config');
+    expect(config.allowedPorts).toEqual([8080, 8081, 8082]);
+    expect(config.blockedPorts).toEqual([80, 443]);
+    expect(env.get('metadata').version).toBe('1.0.0');
+  });
+
+  test('validates complex structure with all types', () => {
+    const jsonContent = {
+      application: {
+        name: 'myapp',
+        version: '2.0.0',
+        settings: {
+          debug: false,
+          timeout: 5000,
+          features: ['auth', 'api', 'websocket'],
+          limits: {
+            maxConnections: 100,
+            rateLimit: 1000,
+          },
+        },
+      },
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        application: schema.object({
+          name: schema.string(),
+          version: schema.string(),
+          settings: schema.object({
+            debug: schema.boolean(),
+            timeout: schema.number(),
+            features: schema.array(schema.string()),
+            limits: schema.object({
+              maxConnections: schema.number({ positive: true }),
+              rateLimit: schema.number({ positive: true }),
+            }),
+          }),
+        }),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    const app = env.get('application');
+    expect(app.name).toBe('myapp');
+    expect(app.version).toBe('2.0.0');
+    expect(app.settings.debug).toBe(false);
+    expect(app.settings.timeout).toBe(5000);
+    expect(app.settings.features).toEqual(['auth', 'api', 'websocket']);
+    expect(app.settings.limits.maxConnections).toBe(100);
+    expect(app.settings.limits.rateLimit).toBe(1000);
+  });
+
+  test('validates nested objects with optional fields', () => {
+    const jsonContent = {
+      database: {
+        host: 'localhost',
+        port: 5432,
+      },
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        database: schema.object({
+          host: schema.string(),
+          port: schema.number(),
+          username: schema.string({ optional: true }),
+          password: schema.string({ optional: true }),
+        }),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    const db = env.get('database');
+    expect(db.host).toBe('localhost');
+    expect(db.port).toBe(5432);
+    expect(db.username).toBeUndefined();
+    expect(db.password).toBeUndefined();
+  });
+
+  test('validates arrays of enums', () => {
+    const jsonContent = {
+      environments: ['development', 'production', 'test'],
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        environments: schema.array(
+          schema.enum(['development', 'production', 'test', 'staging'] as const)
+        ),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    expect(env.get('environments')).toEqual(['development', 'production', 'test']);
+  });
+
+  test('validates nested objects with string format constraints', () => {
+    const jsonContent = {
+      api: {
+        endpoint: 'https://api.example.com',
+        apiKey: '550e8400-e29b-41d4-a716-446655440000',
+        email: 'admin@example.com',
+      },
+    };
+
+    fs.writeFileSync('.env.complex', JSON.stringify(jsonContent, null, 2));
+
+    const env = createEnvSchema(
+      (schema) => ({
+        api: schema.object({
+          endpoint: schema.string({ format: 'url' }),
+          apiKey: schema.string({ format: 'uuid' }),
+          email: schema.string({ format: 'email' }),
+        }),
+      }),
+      { envFile: '.env.complex', throwErrorOnValidationFail: false }
+    );
+
+    const api = env.get('api');
+    expect(api.endpoint).toBe('https://api.example.com');
+    expect(api.apiKey).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(api.email).toBe('admin@example.com');
+  });
+});

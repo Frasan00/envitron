@@ -77,7 +77,7 @@ export default class EnvironmentManager<
   all(): { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any } {
     return Object.keys(this.envs).reduce(
       (acc, key) => {
-        acc[key as keyof T] = this.get(key) as InferEnvCallbackType<T[keyof T]>;
+        acc[key as keyof T] = this.get(key) as any;
         return acc;
       },
       {} as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }
@@ -120,6 +120,28 @@ export default class EnvironmentManager<
    */
   parseEnvFile(envPath: string): EnvParsedFileType {
     const envFile = fs.readFileSync(envPath, 'utf8');
+
+    try {
+      const parsed = JSON.parse(envFile);
+
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        throw new Error('[Envitron] JSON must be an object');
+      }
+
+      return parsed as EnvParsedFileType;
+    } catch (jsonError: any) {
+      if (jsonError.message?.startsWith('[Envitron]')) {
+        throw jsonError;
+      }
+
+      return this.parseEnvFileTraditional(envFile);
+    }
+  }
+
+  /**
+   * @description - This function parses traditional .env files with key=value format
+   */
+  private parseEnvFileTraditional(envFile: string): EnvParsedFileType {
     const envsObject: EnvParsedFileType = {};
 
     const regex =
@@ -131,7 +153,6 @@ export default class EnvironmentManager<
       const key = match[1];
       let value = match[2]?.trim() || '';
 
-      // Remove surrounding quotes if any
       if (
         (value.startsWith('"') && value.endsWith('"')) ||
         (value.startsWith("'") && value.endsWith("'")) ||
@@ -140,7 +161,6 @@ export default class EnvironmentManager<
         const quoteType = value[0];
         value = value.slice(1, -1);
 
-        // Handle escape sequences only if double-quoted
         if (quoteType === '"') {
           value = value
             .replace(/\\n/g, '\n')

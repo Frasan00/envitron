@@ -9,7 +9,7 @@ import type {
 /**
  * @description - An object that contains the parsed environment variables
  */
-export type EnvParsedFileType = Record<string, string | undefined>;
+export type EnvParsedFileType = Record<string, any>;
 
 /**
  * @description - An object that contains the options for the environment manager

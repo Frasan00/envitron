@@ -40,13 +40,13 @@ export function validateEnvs<
   T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
 >(envManagerInstance: EnvironmentManager<T>): void {
   for (const schemaKey in envManagerInstance.schemaDefinition) {
-    const envValue = envManagerInstance.envs[schemaKey] as string;
+    const envValue = envManagerInstance.envs[schemaKey];
     const envParser = envManagerInstance.schemaDefinition[schemaKey];
     const res = envParser(envValue);
     if (!envManagerInstance.throwErrorOnValidationFail) {
       if (res.error?.type === 'required_and_missing') {
         log(new MissingRequiredEnvError(schemaKey).message, envManagerInstance.logs);
-        envManagerInstance.envs[schemaKey] = res.value as string;
+        envManagerInstance.envs[schemaKey] = res.value;
         continue;
       }
 
@@ -56,11 +56,11 @@ export function validateEnvs<
             .message,
           envManagerInstance.logs
         );
-        envManagerInstance.envs[schemaKey] = res.value as string;
+        envManagerInstance.envs[schemaKey] = res.value;
         continue;
       }
 
-      envManagerInstance.envs[schemaKey] = res.value as string;
+      envManagerInstance.envs[schemaKey] = res.value;
       continue;
     }
 
@@ -72,7 +72,7 @@ export function validateEnvs<
       throw new WrongTypeError(schemaKey, envValue, res.error.expectedType, res.error.foundType!);
     }
 
-    envManagerInstance.envs[schemaKey] = res.value as string;
+    envManagerInstance.envs[schemaKey] = res.value;
   }
 }
 
@@ -138,9 +138,7 @@ export function createEnvSchema<T extends Record<string, EnvironmentSchemaTypes>
 
   return Object.keys(envManagerInstance.envs).reduce(
     (acc, key) => {
-      acc[key as keyof T] = envManagerInstance.get(key) as InferEnvCallbackType<
-        T[keyof T]
-      > as InferType<T[keyof T]>;
+      acc[key as keyof T] = envManagerInstance.get(key) as any;
       return acc;
     },
     envManagerInstance as { [K in keyof T]: InferEnvCallbackType<T[K]> } & { [key: string]: any }

@@ -4,8 +4,11 @@ import {
   EnvironmentCustom,
   EnvironmentEnum,
   EnvironmentNumber,
+  EnvironmentObject,
   EnvironmentSchemaTypeOptions,
+  EnvironmentSchemaTypes,
   EnvironmentString,
+  EnvironmentTypedArray,
   EnvValidationCallback,
   InferType,
   NumberOptions,
@@ -32,13 +35,27 @@ export class Schema {
   string<O extends boolean = false>(
     options?: EnvironmentSchemaTypeOptions<O> & StringOptions
   ): EnvValidationCallback<O extends true ? EnvironmentString | undefined : EnvironmentString> {
-    return (value) => {
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<
             O extends true ? EnvironmentString | undefined : EnvironmentString
           >,
           error: this.isRequired(options) ? { type: 'required_and_missing' } : undefined,
+        };
+      }
+
+      if (typeof value !== 'string') {
+        return {
+          value: undefined as InferType<
+            O extends true ? EnvironmentString | undefined : EnvironmentString
+          >,
+          error: {
+            type: 'wrong_type',
+            foundType: Array.isArray(value) ? 'array' : typeof value,
+            expectedType: options?.format || 'string',
+            foundValue: typeof value === 'object' ? JSON.stringify(value) : String(value),
+          },
         };
       }
 
@@ -75,7 +92,7 @@ export class Schema {
   number<O extends boolean = false>(
     options?: EnvironmentSchemaTypeOptions<O> & NumberOptions
   ): EnvValidationCallback<O extends true ? EnvironmentNumber | undefined : EnvironmentNumber> {
-    return (value: string | undefined) => {
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<
@@ -156,7 +173,7 @@ export class Schema {
   boolean<O extends boolean = false>(
     options?: EnvironmentSchemaTypeOptions<O>
   ): EnvValidationCallback<O extends true ? EnvironmentBoolean | undefined : EnvironmentBoolean> {
-    return (value: string | undefined) => {
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<
@@ -208,7 +225,7 @@ export class Schema {
     enumValues: T,
     options?: EnvironmentSchemaTypeOptions<O>
   ): EnvValidationCallback<O extends true ? EnvironmentEnum<T> | undefined : EnvironmentEnum<T>> {
-    return (value: string) => {
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<EnvironmentEnum<T>>,
@@ -242,52 +259,96 @@ export class Schema {
   }
 
   /**
-   * @description - A function that validates an array environment variable
-   * @description - Environment variables are required by default, unless the `optional` option is set to true
+   * @description - A function that validates an array environment variable with typed elements
+   * @param elementValidator - Element validator for typed arrays
    * @param options - An object that contains the options for the environment variable
-   * @returns A function that validates an array environment variable
+   * @returns A function that validates a typed array environment variable
    */
-  array<T = string, O extends boolean = false>(
+  array<T extends EnvironmentSchemaTypes>(
+    elementValidator: EnvValidationCallback<T>,
+    options?: EnvironmentSchemaTypeOptions<false>
+  ): EnvValidationCallback<Array<InferType<T>>>;
+
+  /**
+   * @description - A function that validates an optional array environment variable with typed elements
+   * @param elementValidator - Element validator for typed arrays
+   * @param options - An object that contains the options for the environment variable (must set optional: true)
+   * @returns A function that validates an optional typed array environment variable
+   */
+  array<T extends EnvironmentSchemaTypes>(
+    elementValidator: EnvValidationCallback<T>,
+    options: EnvironmentSchemaTypeOptions<true>
+  ): EnvValidationCallback<Array<InferType<T>> | undefined>;
+
+  /**
+   * @description - A function that validates an untyped array environment variable
+   * @param options - An object that contains the options for the environment variable
+   * @returns A function that validates an untyped array environment variable
+   */
+  array(options?: EnvironmentSchemaTypeOptions<false>): EnvValidationCallback<EnvironmentArray>;
+
+  /**
+   * @description - A function that validates an optional untyped array environment variable
+   * @param options - An object that contains the options for the environment variable (must set optional: true)
+   * @returns A function that validates an optional untyped array environment variable
+   */
+  array(
+    options: EnvironmentSchemaTypeOptions<true>
+  ): EnvValidationCallback<EnvironmentArray | undefined>;
+
+  array<T extends EnvironmentSchemaTypes = any, O extends boolean = false>(
+    elementValidatorOrOptions?: EnvValidationCallback<T> | EnvironmentSchemaTypeOptions<O>,
     options?: EnvironmentSchemaTypeOptions<O>
-  ): EnvValidationCallback<O extends true ? EnvironmentArray | undefined : EnvironmentArray> {
-    return (value: string | undefined) => {
+  ): EnvValidationCallback<any> {
+    const isValidator = typeof elementValidatorOrOptions === 'function';
+    const elementValidator = isValidator
+      ? (elementValidatorOrOptions as EnvValidationCallback<T>)
+      : undefined;
+    const finalOptions = isValidator
+      ? options
+      : (elementValidatorOrOptions as EnvironmentSchemaTypeOptions<O> | undefined);
+
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
-          value: undefined as InferType<
-            O extends true ? EnvironmentArray | undefined : EnvironmentArray
-          >,
-          error: this.isRequired(options) ? { type: 'required_and_missing' } : undefined,
+          value: undefined as any,
+          error: this.isRequired(finalOptions) ? { type: 'required_and_missing' } : undefined,
         };
       }
+
+      let arrayValue: any[];
 
       if (Array.isArray(value)) {
+        arrayValue = value;
+      } else if (typeof value === 'string') {
+        arrayValue = value.split(',').map((v) => v.trim());
+      } else {
         return {
-          value: value as InferType<
-            O extends true ? EnvironmentArray | undefined : EnvironmentArray
-          >,
-        };
-      }
-
-      const parsedValue = value?.split(',').map((v) => v.trim()) as T[];
-      if (!Array.isArray(parsedValue)) {
-        return {
-          value: undefined as InferType<
-            O extends true ? EnvironmentArray | undefined : EnvironmentArray
-          >,
+          value: undefined as any,
           error: {
             type: 'wrong_type',
             foundType: typeof value,
             expectedType: 'array',
-            foundValue: value,
+            foundValue: typeof value === 'string' ? value : JSON.stringify(value),
           },
         };
       }
 
-      const finalValue = parsedValue as EnvironmentArray;
+      if (!elementValidator) {
+        return {
+          value: arrayValue as any,
+        };
+      }
+
+      const validatedArray: any[] = [];
+
+      for (let i = 0; i < arrayValue.length; i++) {
+        const result = elementValidator(arrayValue[i]);
+        validatedArray.push(result.value);
+      }
+
       return {
-        value: finalValue as InferType<
-          O extends true ? EnvironmentArray | undefined : EnvironmentArray
-        >,
+        value: validatedArray as any,
       };
     };
   }
@@ -298,7 +359,7 @@ export class Schema {
    * @returns A function that validates a custom environment variable
    */
   custom<T, O extends boolean = false>(
-    validator: (value: string | undefined) => T,
+    validator: (value: any) => T,
     options?: EnvironmentSchemaTypeOptions<O>
   ): EnvValidationCallback<
     O extends true ? EnvironmentCustom<T> | undefined : EnvironmentCustom<T>
@@ -307,7 +368,7 @@ export class Schema {
       throw new Error('[Envitron] - Validator must be a function');
     }
 
-    return (value: string | undefined) => {
+    return (value: any) => {
       if (this.nonExistingValue(value)) {
         return {
           value: undefined as InferType<
@@ -321,6 +382,67 @@ export class Schema {
       return {
         value: result as InferType<
           O extends true ? EnvironmentCustom<T> | undefined : EnvironmentCustom<T>
+        >,
+      };
+    };
+  }
+
+  /**
+   * @description - A function that validates a nested object environment variable
+   * @description - Environment variables are required by default, unless the `optional` option is set to true
+   * @param nestedSchema - An object that defines the schema for the nested object
+   * @param options - An object that contains the options for the environment variable
+   * @returns A function that validates a nested object environment variable
+   */
+  object<
+    T extends Record<string, EnvValidationCallback<EnvironmentSchemaTypes>>,
+    O extends boolean = false,
+  >(
+    nestedSchema: T,
+    options?: EnvironmentSchemaTypeOptions<O>
+  ): EnvValidationCallback<
+    O extends true ? EnvironmentObject<T> | undefined : EnvironmentObject<T>
+  > {
+    return (value: any) => {
+      if (this.nonExistingValue(value)) {
+        return {
+          value: undefined as InferType<
+            O extends true ? EnvironmentObject<T> | undefined : EnvironmentObject<T>
+          >,
+          error: this.isRequired(options) ? { type: 'required_and_missing' } : undefined,
+        };
+      }
+
+      if (typeof value !== 'object' || Array.isArray(value) || value === null) {
+        return {
+          value: undefined as InferType<
+            O extends true ? EnvironmentObject<T> | undefined : EnvironmentObject<T>
+          >,
+          error: {
+            type: 'wrong_type',
+            foundType: Array.isArray(value) ? 'array' : typeof value,
+            expectedType: 'object',
+            foundValue: typeof value === 'string' ? value : JSON.stringify(value),
+          },
+        };
+      }
+
+      const validatedObject: any = {};
+      let hasErrors = false;
+
+      for (const [key, validator] of Object.entries(nestedSchema)) {
+        const result = validator(value[key]);
+
+        if (result.error) {
+          hasErrors = true;
+        }
+
+        validatedObject[key] = result.value;
+      }
+
+      return {
+        value: validatedObject as InferType<
+          O extends true ? EnvironmentObject<T> | undefined : EnvironmentObject<T>
         >,
       };
     };
