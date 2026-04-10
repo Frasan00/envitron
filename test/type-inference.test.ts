@@ -405,4 +405,60 @@ describe('Type inference', () => {
       expect(optionalPorts).toEqual([3000, 4000]);
     });
   });
+
+  describe('Enum types', () => {
+    it('should properly infer union type for required enums', () => {
+      const jsonContent = { NODE_ENV: 'production' };
+      fs.writeFileSync('.env.type-test.json', JSON.stringify(jsonContent, null, 2));
+
+      const env = createEnvSchema(
+        (schema) => ({
+          NODE_ENV: schema.enum(['development', 'production', 'test'] as const),
+        }),
+        { envFile: '.env.type-test.json' }
+      );
+
+      const nodeEnv = env.get('NODE_ENV');
+
+      type NodeEnvType = typeof nodeEnv;
+      type ExpectedNodeEnv = 'development' | 'production' | 'test';
+
+      const assertNodeEnv: NodeEnvType extends ExpectedNodeEnv
+        ? ExpectedNodeEnv extends NodeEnvType
+          ? true
+          : false
+        : false = true;
+
+      expect(assertNodeEnv).toBe(true);
+      expect(nodeEnv === 'production').toBe(true);
+    });
+
+    it('should properly infer union | undefined for optional enums', () => {
+      const jsonContent = { NODE_ENV: 'development' };
+      fs.writeFileSync('.env.type-test.json', JSON.stringify(jsonContent, null, 2));
+
+      const env = createEnvSchema(
+        (schema) => ({
+          NODE_ENV: schema.enum(['development', 'production', 'test'] as const, {
+            optional: true,
+          }),
+        }),
+        { envFile: '.env.type-test.json' }
+      );
+
+      const nodeEnv = env.get('NODE_ENV');
+
+      type NodeEnvType = typeof nodeEnv;
+      type ExpectedNodeEnv = 'development' | 'production' | 'test' | undefined;
+
+      const assertNodeEnv: NodeEnvType extends ExpectedNodeEnv
+        ? ExpectedNodeEnv extends NodeEnvType
+          ? true
+          : false
+        : false = true;
+
+      expect(assertNodeEnv).toBe(true);
+      expect(nodeEnv === 'development').toBe(true);
+    });
+  });
 });

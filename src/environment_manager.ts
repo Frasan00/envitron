@@ -49,12 +49,11 @@ export default class EnvironmentManager<
    * @warning - If the value is not found and no default value is provided, it will return empty string to mimic the behavior of process.env since provided envs are always present even if they are not set
    */
   get<K extends keyof T>(key: K): InferEnvCallbackType<T[K]>;
-  get<K extends keyof T, D extends InferEnvCallbackType<T[K]>>(
+  get<K extends string>(
     key: K,
-    defaultValue: D
-  ): NonNullable<InferEnvCallbackType<T[K]>>;
+    defaultValue: K extends keyof T ? NonNullable<InferEnvCallbackType<T[K & keyof T]>> : any
+  ): K extends keyof T ? NonNullable<InferEnvCallbackType<T[K & keyof T]>> : string;
   get(key: string): string | undefined;
-  get(key: string, defaultValue: string): string;
   get<K extends keyof T>(key: K | string, defaultValue?: any): any {
     const value = this.envs[key as string];
     // By default, we return undefined if the value is empty string
@@ -65,9 +64,11 @@ export default class EnvironmentManager<
   /**
    * @description - This function is used to set a value in the environment variables
    */
-  set<K extends keyof T>(key: K, value: T[K]): void;
-  set(key: string, value: any): void;
-  set<K extends keyof T>(key: K | string, value: T[K] | any): void {
+  set<K extends string>(
+    key: K,
+    value: K extends keyof T ? InferEnvCallbackType<T[K & keyof T]> : any
+  ): void;
+  set<K extends keyof T>(key: K | string, value: any): void {
     this.envs[key as string] = value;
   }
 

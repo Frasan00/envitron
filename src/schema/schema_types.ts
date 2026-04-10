@@ -40,26 +40,12 @@ export type InferType<T> =
   T extends EnvironmentObject<infer U>
     ? U extends Record<string, EnvValidationCallback<any>>
       ? { [K in keyof U]: InferEnvCallbackType<U[K]> }
-      : U
-    : T extends EnvironmentTypedArray<infer U>
-      ? U extends EnvValidationCallback<any>
-        ? Array<InferEnvCallbackType<U>>
-        : Array<U>
-      : T extends EnvironmentArray
-        ? string[]
-        : T extends EnvironmentString
-          ? string
-          : T extends EnvironmentNumber
-            ? number
-            : T extends EnvironmentBoolean
-              ? boolean
-              : T extends EnvironmentEnum<infer U>
-                ? U[number]
-                : T extends undefined
-                  ? undefined
-                  : T extends EnvironmentCustom<infer U>
-                    ? U
-                    : never;
+      : U extends readonly string[]
+        ? U extends string[]
+          ? U // mutable string array (EnvironmentArray / EnvironmentTypedArray<string>)
+          : U[number] // readonly-only tuple (EnvironmentEnum) → union of values
+        : U // primitives (string, number, boolean), typed arrays, custom types
+    : never;
 
 export type InferEnvCallbackType<T extends EnvValidationCallback<EnvironmentSchemaTypes>> =
   T extends EnvValidationCallback<infer U> ? InferType<U> : never;

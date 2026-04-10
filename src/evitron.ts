@@ -33,7 +33,7 @@ function getStandaloneInstance<T extends Record<string, EnvironmentSchemaTypes>>
     };
   }
 
-  return envManagerInstance as EnvironmentManager<T>;
+  return envManagerInstance as unknown as EnvironmentManager<T>;
 }
 
 export function validateEnvs<
